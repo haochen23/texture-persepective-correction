@@ -1,0 +1,1 @@
+aws s3 cp s3://biglook/ ./dataset/biglook --recursive --exclude "*" --include "*Albedo.jpg"
