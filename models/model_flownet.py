@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from building_blocks import plainDecoderBlock, plainEncoderBlock, resDecoderBlock, resEncoderBlock
+from models.modules.building_blocks import plainDecoderBlock, plainEncoderBlock, resDecoderBlock, resEncoderBlock
 
 
 class EncoderNet(nn.Module):
