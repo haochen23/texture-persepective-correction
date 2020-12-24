@@ -9,11 +9,11 @@ import torch
 import glob
 
 
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--input_dir', required=True, type=str, help='Path to the input directory containing subdirectories of source files')
-# parser.add_argument('--output_dir', required=True, type=str, help='Path to the output directory containing train and val subdirectories')
-# parser.add_argument('--split_ratio', type=float, default=0.1, help='how much data to put in val, default=0.1')
-# args = vars(parser.parse_args())
+parser = argparse.ArgumentParser()
+parser.add_argument('--input_dir', required=True, type=str, help='Path to the input directory containing subdirectories of source files')
+parser.add_argument('--output_dir', required=True, type=str, help='Path to the output directory containing train and val subdirectories')
+parser.add_argument('--split_ratio', type=float, default=0.1, help='how much data to put in val, default=0.1')
+args = vars(parser.parse_args())
 
 def generate_rotation(f_path, k, save_dir):
     types = "rotation"
