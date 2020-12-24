@@ -1,7 +1,5 @@
 import numpy as np
 import skimage
-import skimage.io as io
-from skimage.transform import rescale
 import scipy.io as scio
 import data.distortion_model as distortion_model
 import os
@@ -11,11 +9,11 @@ import torch
 import glob
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--input_dir', required=True, type=str, help='Path to the input directory containing subdirectories of source files')
-parser.add_argument('--output_dir', required=True, type=str, help='Path to the output directory containing train and val subdirectories')
-parser.add_argument('--split_ratio', type=float, default=0.1, help='how much data to put in val, default=0.1')
-args = vars(parser.parse_args())
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--input_dir', required=True, type=str, help='Path to the input directory containing subdirectories of source files')
+# parser.add_argument('--output_dir', required=True, type=str, help='Path to the output directory containing train and val subdirectories')
+# parser.add_argument('--split_ratio', type=float, default=0.1, help='how much data to put in val, default=0.1')
+# args = vars(parser.parse_args())
 
 def generate_rotation(f_path, k, save_dir):
     types = "rotation"
@@ -23,7 +21,7 @@ def generate_rotation(f_path, k, save_dir):
     height = 512
 
     parameters = distortion_model.distortionParameter(types)
-    OriImg = io.imread(f_path)
+    OriImg = cv2.imread(f_path)
     OriImg = cv2.resize(OriImg, (width, height))
 
     disImg = np.array(np.zeros(OriImg.shape), dtype=np.uint8)
@@ -68,10 +66,16 @@ def generate_rotation(f_path, k, save_dir):
 
     trainDisPath = save_dir + 'distorted/'
     trainUvPath = save_dir + 'flow/'
+    if not os.path.exists(trainDisPath):
+        os.makedirs(trainDisPath, exist_ok=True)
+    if not os.path.exists(trainUvPath):
+        os.makedirs(trainUvPath, exist_ok=True)
     saveImgPath = '%s%s%s%s%s%s' % (trainDisPath, '/',types,'_', str(k).zfill(6), '.jpg')
     saveMatPath = '%s%s%s%s%s%s' % (trainUvPath, '/', types, '_', str(k).zfill(6), '.mat')
-    io.imsave(saveImgPath, cropImg)
+    cv2.imwrite(saveImgPath, cropImg)
     scio.savemat(saveMatPath, {'u': crop_u, 'v': crop_v})
+    cv2.imshow('rotation', cropImg)
+    cv2.waitKey(1)
 
 
 def generate_projection(f_path, k, save_dir):
@@ -80,7 +84,7 @@ def generate_projection(f_path, k, save_dir):
     height = 256
 
     parameters = distortion_model.distortionParameter(types)
-    OriImg = io.imread(f_path)
+    OriImg = cv2.imread(f_path)
     ScaImg = cv2.resize(OriImg, (width, height))
     ScaImg = skimage.img_as_ubyte(ScaImg)
 
@@ -116,10 +120,17 @@ def generate_projection(f_path, k, save_dir):
 
     trainDisPath = save_dir + 'distorted/'
     trainUvPath = save_dir + 'flow/'
+    if not os.path.exists(trainDisPath):
+        os.makedirs(trainDisPath, exist_ok=True)
+    if not os.path.exists(trainUvPath):
+        os.makedirs(trainUvPath, exist_ok=True)
     saveImgPath = '%s%s%s%s%s%s' % (trainDisPath, '/', types, '_', str(k).zfill(6), '.jpg')
     saveMatPath = '%s%s%s%s%s%s' % (trainUvPath, '/', types, '_', str(k).zfill(6), '.mat')
-    io.imsave(saveImgPath, disImg)
+    cv2.imshow('projective', disImg)
+    cv2.waitKey(1)
+    cv2.imwrite(saveImgPath, disImg)
     scio.savemat(saveMatPath, {'u': u, 'v': v})
+
 
 
 def build_dataset(input_dir, output_dir, split_ratio = 0.2):
@@ -146,20 +157,21 @@ def build_dataset(input_dir, output_dir, split_ratio = 0.2):
 
     # build val
     count = 0
-    for subdir in subdirs[indices[:val_indices]]:
+    for subdir in [subdirs[i] for i in indices[:val_indices]]:
         try:
             files = glob.glob(subdir + '/*Albedo*')
-            if files is not None:
+            if len(files) > 0:
                 f_path = files[0]
                 generate_rotation(f_path=f_path, k=count, save_dir=output_val)
                 generate_projection(f_path=f_path, k=count, save_dir=output_val)
                 count += 1
-        except:
-            pass
+        except Exception as e:
+            print(e)
+
 
     # build train
     count = 0
-    for subdir in subdirs[indices[val_indices:]]:
+    for subdir in [subdirs[i] for i in indices[val_indices:]]:
         try:
             files = glob.glob(subdir + '/*Albedo*')
             if files is not None:
@@ -167,12 +179,16 @@ def build_dataset(input_dir, output_dir, split_ratio = 0.2):
                 generate_rotation(f_path=f_path, k=count, save_dir=output_train)
                 generate_projection(f_path=f_path, k=count, save_dir=output_train)
                 count += 1
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
 
 if __name__ == '__main__':
     input_dir = args['input_dir']
     output_dir = args['output_dir']
     split_ratio = args['split_ratio']
+    # input_dir = 'dataset/biglook/'
+    # output_dir = 'dataset/processed2/'
+    split_ratio = 0.2
     build_dataset(input_dir, output_dir, split_ratio=split_ratio)
+    cv2.destroyAllWindows()
