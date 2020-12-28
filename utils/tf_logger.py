@@ -6,7 +6,7 @@ from PIL import Image
 
 class TFLogger(object):
     def __init__(self, log_dir):
-        self.writer = tf.summary.create_file_writer(log_dir + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        self.writer = tf.summary.create_file_writer(log_dir + datetime.now().strftime("%Y-%m-%d %H-%M-%S"))
 
     def scalar_summary(self, name, value, step):
         """log a scalar variable"""
