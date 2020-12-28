@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from utils.tf_logger import TFLogger
+from utils.txt_logger import create_logger
 from config import Config
 from data.dataset_flownet import get_loader
 from models.model_flownet import FlowNet
@@ -19,15 +20,17 @@ class FlowNetTrainer:
         self.seed = conf.seed
         self.lr = conf.lr
         self.epochs = conf.epochs
-        self.save_model = conf.save_model
+        self.save_epoch = conf.save_epoch
         self.batch_size = conf.batch_size
         self.log_interval = conf.log_interval
         self.data_dir = conf.data_dir
+        self.save_path = conf.save_path
         self.layers = conf.layers
+        self.txt_logger = create_logger("FlowNet-Train", "logs/")
 
         torch.manual_seed(self.seed)
 
-        kwargs = {'num_workers': 4, 'pin_memory': True} if self.cuda else {}
+        # kwargs = {'num_workers': 4, 'pin_memory': True} if self.cuda else {}
         self.train_loader = get_loader(imageDir=self.data_dir + 'train/distorted',
                                        flowDir=self.data_dir + 'train/flow/',
                                        batch_size=self.batch_size)
@@ -37,7 +40,6 @@ class FlowNetTrainer:
         self.model = FlowNet(layers=self.layers)
         self.criterion = EPELoss()
         self.globaliter = 0
-
 
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
@@ -50,7 +52,8 @@ class FlowNetTrainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         self.tf_logger = TFLogger(r'tensorboard_logs/')
 
-    def train(self, epoch):
+    def train_epoch(self, epoch):
+        self.txt_logger.info(f"Training epoch {epoch}...")
         self.model.train()
 
         for batch_idx, (images, flow_xs, flow_ys) in enumerate(self.train_loader):
@@ -71,7 +74,7 @@ class FlowNetTrainer:
             self.optimizer.step()
 
             if batch_idx % self.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                self.txt_logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(images), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.item()))
 
@@ -81,7 +84,20 @@ class FlowNetTrainer:
             for tag, value in info.items():
                 self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
 
-    def test(self, epoch):
+            # saving model at every epoch
+            if self.save_epoch:
+                if self.cuda:
+                    if isinstance(self.model, nn.DataParallel):
+                        torch.save(self.model.module.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                    else:
+                        torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                else:
+                    torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+
+
+
+    def test_epoch(self, epoch):
+        self.txt_logger.info(f"Validating epoch {epoch}... ")
         self.model.eval()
         test_loss = 0
         with torch.no_grad():
@@ -99,10 +115,29 @@ class FlowNetTrainer:
                 loss = self.criterion(flow_output, flow_truth)
                 test_loss += loss.data[0]
             test_loss /= batch_idx
-        print('\nTest set: {}/{} Average loss: {:.4f}, \n'.format(len(self.test_loader.dataset), test_loss))
+        self.txt_logger.info('\nTest set Epoch: {} {}/{} Average loss: {:.4f}, \n'.format(epoch, len(self.test_loader.dataset), test_loss))
         info = {'val_loss': test_loss}
         for tag, value in info.items():
             self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
+        return test_loss
+
+    def train(self):
+        self.txt_logger.info("Training model...")
+        best_valid_loss = float('inf')
+        for epoch in range(1, self.epochs + 1):
+            self.train_epoch(epoch)
+            valid_loss = self.test_epoch(epoch)
+            if valid_loss < best_valid_loss:
+                best_valid_loss = valid_loss
+                self.txt_logger.info(f"A better model found, Epoch {epoch}. Saving the best model...")
+                # save cpu models
+                if self.cuda:
+                    if isinstance(self.model, nn.DataParallel):
+                        torch.save(self.model.module.cpu(), self.save_path + 'best_model.pt')
+                    else:
+                        torch.save(self.model.cpu(), self.save_path + 'best_model.pt')
+                else:
+                    torch.save(self.model.cpu(), self.save_path + 'best_model.pt')
 
 
 if __name__ == '__main__':
@@ -112,15 +147,17 @@ if __name__ == '__main__':
         seed=2,
         lr=0.01,
         epochs=4,
-        save_model=False,
+        save_epoch=False,
         batch_size=16,
         log_interval=100,
         layers=[1, 1, 1, 1, 2],
-        data_dir='dataset/processed/'
+        data_dir='dataset/processed/',
+        save_path='output/'
     )
 
     trainer = FlowNetTrainer(model_config)
     print(trainer.model)
+    # print(next(iter(trainer.train_loader)))
     print(next(trainer.model.encoder.parameters()).device)
     print(next(trainer.model.decoder.parameters()).device)
 
