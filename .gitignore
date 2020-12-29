@@ -3,3 +3,5 @@
 
 dataset/
 dataset/**
+/tensorboard_logs/
+/tensorboard_logs/**
