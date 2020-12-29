@@ -63,7 +63,7 @@ class FlowNetTrainer:
                 images = images.cuda()
                 flow_xs = flow_xs.cuda()
                 flow_ys = flow_ys.cuda()
-                self.model = self.model.cuda()
+
 
             images = Variable(images)
             labels_x = Variable(flow_xs)
@@ -94,6 +94,7 @@ class FlowNetTrainer:
                         torch.save(self.model.module.cpu(), self.save_path + f"epoch-{epoch}.pt")
                     else:
                         torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                    self.model.cuda()
                 else:
                     torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
 
@@ -109,7 +110,7 @@ class FlowNetTrainer:
                     images = images.cuda()
                     flow_xs = flow_xs.cuda()
                     flow_ys = flow_ys.cuda()
-                    self.model = self.model.cuda()
+
 
                 images = Variable(images)
                 labels_x = Variable(flow_xs)
@@ -140,6 +141,7 @@ class FlowNetTrainer:
                         torch.save(self.model.module.cpu(), self.save_path + 'best_model.pt')
                     else:
                         torch.save(self.model.cpu(), self.save_path + 'best_model.pt')
+                    self.model.cuda()
                 else:
                     torch.save(self.model.cpu(), self.save_path + 'best_model.pt')
 
