@@ -7,6 +7,7 @@ from config import Config
 from data.dataset_flownet import get_loader
 from models.model_flownet import FlowNet
 from models.modules.loss import EPELoss
+import os
 
 
 class FlowNetTrainer:
@@ -27,7 +28,8 @@ class FlowNetTrainer:
         self.save_path = conf.save_path
         self.layers = conf.layers
         self.txt_logger = create_logger("FlowNet-Train", "logs/")
-
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path, exist_ok=True)
         torch.manual_seed(self.seed)
 
         # kwargs = {'num_workers': 4, 'pin_memory': True} if self.cuda else {}
@@ -62,6 +64,7 @@ class FlowNetTrainer:
                 flow_xs = flow_xs.cuda()
                 flow_ys = flow_ys.cuda()
 
+
             images = Variable(images)
             labels_x = Variable(flow_xs)
             labels_y = Variable(flow_ys)
@@ -80,7 +83,7 @@ class FlowNetTrainer:
 
             # ============ TensorBoard logging ============#
             self.globaliter += 1
-            info = {'train_loss': loss.data[0]}
+            info = {'train_loss': loss.item()}
             for tag, value in info.items():
                 self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
 
@@ -91,6 +94,7 @@ class FlowNetTrainer:
                         torch.save(self.model.module.cpu(), self.save_path + f"epoch-{epoch}.pt")
                     else:
                         torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                    self.model.cuda()
                 else:
                     torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
 
@@ -107,15 +111,16 @@ class FlowNetTrainer:
                     flow_xs = flow_xs.cuda()
                     flow_ys = flow_ys.cuda()
 
+
                 images = Variable(images)
                 labels_x = Variable(flow_xs)
                 labels_y = Variable(flow_ys)
                 flow_truth = torch.cat([labels_x, labels_y], dim=1)
                 flow_output = self.model(images)
                 loss = self.criterion(flow_output, flow_truth)
-                test_loss += loss.data[0]
+                test_loss += loss.item()
             test_loss /= batch_idx
-        self.txt_logger.info('\nTest set Epoch: {} {}/{} Average loss: {:.4f}, \n'.format(epoch, len(self.test_loader.dataset), test_loss))
+        self.txt_logger.info('\nTest set Epoch: {} Average loss: {:.4f}, \n'.format(epoch,  test_loss))
         info = {'val_loss': test_loss}
         for tag, value in info.items():
             self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
@@ -136,6 +141,7 @@ class FlowNetTrainer:
                         torch.save(self.model.module.cpu(), self.save_path + 'best_model.pt')
                     else:
                         torch.save(self.model.cpu(), self.save_path + 'best_model.pt')
+                    self.model.cuda()
                 else:
                     torch.save(self.model.cpu(), self.save_path + 'best_model.pt')
 
