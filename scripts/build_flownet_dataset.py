@@ -155,29 +155,39 @@ def build_dataset(input_dir, output_dir, split_ratio = 0.2):
     val_indices = int(dataset_size * split_ratio)
 
 
+
     # build val
-    count = 0
+    if os.path.exists(output_val+'distorted/'):
+        count = int(sorted(os.listdir(output_val+'distorted/'))[-1].split('.')[0].split('_')[-1]) + 1
+    else:
+        count = 0
+
     for subdir in [subdirs[i] for i in indices[:val_indices]]:
         try:
             files = glob.glob(subdir + '/*Albedo*')
             if len(files) > 0:
                 f_path = files[0]
-                generate_rotation(f_path=f_path, k=count, save_dir=output_val)
                 generate_projection(f_path=f_path, k=count, save_dir=output_val)
+                generate_rotation(f_path=f_path, k=count, save_dir=output_val)
+
                 count += 1
         except Exception as e:
             print(e)
 
 
     # build train
-    count = 0
+    if os.path.exists(output_train + 'distorted/'):
+        count = int(sorted(os.listdir(output_train + 'distorted/'))[-1].split('.')[0].split('_')[-1]) + 1
+    else:
+        count = 0
     for subdir in [subdirs[i] for i in indices[val_indices:]]:
         try:
             files = glob.glob(subdir + '/*Albedo*')
             if files is not None:
                 f_path = files[0]
-                generate_rotation(f_path=f_path, k=count, save_dir=output_train)
                 generate_projection(f_path=f_path, k=count, save_dir=output_train)
+                generate_rotation(f_path=f_path, k=count, save_dir=output_train)
+
                 count += 1
         except Exception as e:
             print(e)
