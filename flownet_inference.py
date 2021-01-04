@@ -5,6 +5,7 @@ import torch.nn as nn
 from torchvision import transforms
 import numpy as np
 import os
+import cv2
 
 from models.model_flownet import FlowNet
 from utils.resampling import rectification
@@ -30,6 +31,12 @@ class FlowNetInference:
         with torch.no_grad():
             flow_output = self.model(image)
         flow = flow_output.data.cpu().numpy().squeeze()
+        u = flow[0, :, :].squeeze()
+        v = flow[1, :, :].squeeze()
+        for _ in range(3):
+            u = cv2.medianBlur(u, 3)
+            v = cv2.medianBlur(v, 3)
+        flow = np.stack((u, v))
 
         # perspective corrected image
         corrected_image, resMask = rectification(image_copy, flow)
