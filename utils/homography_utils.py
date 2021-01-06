@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import math
 from numpy.linalg import inv
-
+import cv2
 
 def get_homography(t, width=512, height=512):
     """
@@ -23,16 +23,20 @@ def get_homography(t, width=512, height=512):
 
     alpha = math.cos(theta * np.pi)
     beta = -math.sin(theta * np.pi)
+
     rotation_matrix = np.array([[alpha, beta, (1 - alpha) * width/2 - beta * height/2],
                                 [-beta, alpha, beta * width/2 + (1 - alpha) * height/2],
                                 [0, 0, 1]])
+
     shear_matrix = np.array([[1.0, 0, 0.0],
                              [0.0, 1, 0.0],
                              [0.0, 0.0, 1.0]])
+
     perspective_matrix = np.array([[1, 0, 0],
                                    [0, 1, 0],
                                    [p1, p2, 1]])
     H = np.dot(np.dot(rotation_matrix, shear_matrix), perspective_matrix)
+
     return H
 
 
@@ -50,6 +54,30 @@ def decode_output(t, width=512, height=512):
     H_inv = inv(H)
 
     return H_inv
+
+
+def center_crop(img, new_height=256, new_width=256):
+    """
+    Function to centre crop an image using opencv
+
+    :param img: cv2 image, the shape should be larger than new_height and new_width
+    :param new_height: resultant image height
+    :param new_width: resultant image width
+    :return:
+        cropped_img: center cropped cv2 image with new_height and new_width
+    """
+
+    width, height = img.shape[:2]
+    if width < new_width or height < new_height:
+        print("Center Crop Warning: Input image shape smaller than Cropped image shape. Resizing it.")
+        cropped_img = cv2.resize(img, (new_width, new_height))
+    else:
+        center = img.shape[:2] / 2
+        x = center[1] - new_width / 2
+        y = center[0] - new_height / 2
+        cropped_img = img[int(y):int(y+new_height), int(x):int(x+new_width)]
+
+    return cropped_img
 
 
 
