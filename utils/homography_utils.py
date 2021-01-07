@@ -3,30 +3,35 @@ import torch
 import math
 from numpy.linalg import inv
 import cv2
+from config import homography_config
 
 def get_homography(t, width=512, height=512):
     """
-    This function transforms a size-3 torch tensor to a homography matrix
-    :param t: a size 3 torch tensor float32
+    This function transforms a size-5 torch tensor to a homography matrix
+    :param t: a size 5 torch tensor float32
            width:  the width of the image that the H should be applied to
            height: the height of the image that the H should be applied to
 
     :return: H: the resultant homography matrix, numpy array
     """
     array = t.detach().cpu().numpy()
-    # rotation angle, theta in range [-30, 30]
-    theta = (array[0] * 2 - 1) / 60
+    # rotation angle, rotate from center theta in range [-20, 20]
+    theta = (array[0] * 2 - 1) / 40
 
     # perspective parameters
     p1 = (array[1] * 2 - 1) / 2000
     p2 = (array[2] * 2 - 1) / 2000
 
+    # add x, y translation parameters, within 5% range
+    tx = int((array[3] * 2 - 1) * width * homography_config['translation_range'])
+    ty = int((array[4] * 2 - 1) * height * homography_config['translation_range'])
+
     alpha = math.cos(theta * np.pi)
     beta = -math.sin(theta * np.pi)
 
-    # rotation from centre
-    rotation_matrix = np.array([[alpha, beta, (1 - alpha) * width/2 - beta * height/2],
-                                [-beta, alpha, beta * width/2 + (1 - alpha) * height/2],
+    # rotation from centre, and x, y translation
+    rotation_matrix = np.array([[alpha, beta, (1 - alpha) * width/2 - beta * height/2 + tx],
+                                [-beta, alpha, beta * width/2 + (1 - alpha) * height/2 + ty],
                                 [0, 0, 1]])
 
     shear_matrix = np.array([[1.0, 0, 0.0],
@@ -44,7 +49,7 @@ def get_homography(t, width=512, height=512):
 def decode_output(t, width=512, height=512):
     """
     This function decodes the output from the homography model
-    :param t: a size 3 torch tensor float32
+    :param t: a size 5 torch tensor float32
     :param width: should be same as in get_homography function
     :param height: should be same as in get_homography function
     :return:

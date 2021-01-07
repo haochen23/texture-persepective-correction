@@ -8,5 +8,6 @@ homography_config = {
   "load_width": 512,
   "load_height": 512,
   "image_width": 256,
-  "image_height": 256
+  "image_height": 256,
+  "translation_range": 0.05
 }

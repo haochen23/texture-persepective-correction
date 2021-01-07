@@ -24,7 +24,7 @@ def generate_data(f_path, k, save_dir, width=512, height=512):
     OriImg = cv2.resize(OriImg, (width, height))
 
     # obtaining training target
-    target = torch.rand(3)
+    target = torch.rand(5)
     H = get_homography(t=target, width=width, height=height)
     distortedImg = cv2.warpPerspective(OriImg, H, (height, width))
     croppedImg = center_crop(distortedImg, new_height=homography_config["image_height"], new_width=homography_config["image_width"])
