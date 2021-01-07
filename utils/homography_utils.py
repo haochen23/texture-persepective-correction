@@ -19,8 +19,8 @@ def get_homography(t, width=512, height=512):
     theta = (array[0] * 2 - 1) / 40
 
     # perspective parameters
-    p1 = (array[1] * 2 - 1) / 2000
-    p2 = (array[2] * 2 - 1) / 2000
+    p1 = (array[1] * 2 - 1) / 6000
+    p2 = (array[2] * 2 - 1) / 6000
 
     # add x, y translation parameters, within 5% range
     tx = int((array[3] * 2 - 1) * width * homography_config['translation_range'])
@@ -78,7 +78,7 @@ def center_crop(img, new_height=256, new_width=256):
         print("Center Crop Warning: Input image shape smaller than Cropped image shape. Resizing it.")
         cropped_img = cv2.resize(img, (new_width, new_height))
     else:
-        center = img.shape[:2] / 2
+        center = np.array(img.shape[:2]) / 2
         x = center[1] - new_width / 2
         y = center[0] - new_height / 2
         cropped_img = img[int(y):int(y+new_height), int(x):int(x+new_width)]

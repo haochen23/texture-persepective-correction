@@ -8,6 +8,7 @@ import torch
 import glob
 from utils.homography_utils import get_homography, decode_output, center_crop
 from config import homography_config
+from numpy.linalg import inv
 
 
 
@@ -36,9 +37,17 @@ def generate_data(f_path, k, save_dir, width=512, height=512):
     if not os.path.exists(trainTargetPath):
         os.makedirs(trainTargetPath, exist_ok=True)
 
-    saveImgPath = '%s%s%s%s%s' % (trainDisPath, '/', '_', str(k).zfill(6), '.jpg')
-    saveMatPath = '%s%s%s%s%s' % (trainTargetPath, '/', '_', str(k).zfill(6), '.mat')
+    saveImgPath = '%s%s%s%s%s%s' % (trainDisPath, '/', 'distorted', '_', str(k).zfill(6), '.jpg')
+    saveMatPath = '%s%s%s%s%s%s' % (trainTargetPath, '/', 'distorted', '_', str(k).zfill(6), '.mat')
+
+    # showing the restored image just for validation purpose
+    H_inv = inv(H)
+    restoredImg = cv2.warpPerspective(croppedImg,
+                                      H_inv,
+                                      (homography_config["image_height"],
+                                       homography_config["image_width"]))
     cv2.imshow('Distorted', croppedImg)
+    cv2.imshow("Restored", restoredImg)
     cv2.waitKey(1)
     cv2.imwrite(saveImgPath, croppedImg)
     scio.savemat(saveMatPath, {'target': target})

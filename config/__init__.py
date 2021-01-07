@@ -5,9 +5,9 @@ class Config:
 
 
 homography_config = {
-  "load_width": 512,
-  "load_height": 512,
-  "image_width": 256,
-  "image_height": 256,
+  "load_width": 1024,
+  "load_height": 1024,
+  "image_width": 512,
+  "image_height": 512,
   "translation_range": 0.05
 }
