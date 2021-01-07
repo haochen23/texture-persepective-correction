@@ -24,6 +24,7 @@ def get_homography(t, width=512, height=512):
     alpha = math.cos(theta * np.pi)
     beta = -math.sin(theta * np.pi)
 
+    # rotation from centre
     rotation_matrix = np.array([[alpha, beta, (1 - alpha) * width/2 - beta * height/2],
                                 [-beta, alpha, beta * width/2 + (1 - alpha) * height/2],
                                 [0, 0, 1]])
