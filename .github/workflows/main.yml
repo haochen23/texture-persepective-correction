@@ -42,7 +42,9 @@ jobs:
 
       - name: Install other dependencies
         run: |
+          chmod +x ./scripts/devscripts/install_deps.sh
           ./scripts/devscripts/install_deps.sh "install_deps"
+        shell: bash
 
       - name: Open issue on failure
         if: ${{ failure() }}
@@ -51,6 +53,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: CI/CD failed
           body: Commit ${{ github.sha }} daily scheduled [CI run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) failed, please looki into it.
-            assignees: 'haochen23'
+          assignees: 'haochen23'
 
 
