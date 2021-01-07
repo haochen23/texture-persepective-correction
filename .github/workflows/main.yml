@@ -51,6 +51,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: CI/CD failed
           body: Commit ${{ github.sha }} daily scheduled [CI run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) failed, please looki into it.
-            assignees: 'haochen23'
+          assignees: 'haochen23'
 
 
