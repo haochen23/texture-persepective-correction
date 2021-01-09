@@ -34,6 +34,11 @@ def get_homography(t, width=512, height=512):
                                 [-beta, alpha, beta * width/2 + (1 - alpha) * height/2 + ty],
                                 [0, 0, 1]])
 
+    # rotation from top left corner
+    # rotation_matrix = np.array([[math.cos(theta), -math.sin(theta), 0],
+    #                             [math.sin(theta), math.cos(theta), 0],
+    #                             [0, 0, 1]])
+
     shear_matrix = np.array([[1.0, 0, 0.0],
                              [0.0, 1, 0.0],
                              [0.0, 0.0, 1.0]])

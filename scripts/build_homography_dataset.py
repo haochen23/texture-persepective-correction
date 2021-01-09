@@ -40,17 +40,30 @@ def generate_data(f_path, k, save_dir, width=512, height=512):
     saveImgPath = '%s%s%s%s%s%s' % (trainDisPath, '/', 'distorted', '_', str(k).zfill(6), '.jpg')
     saveMatPath = '%s%s%s%s%s%s' % (trainTargetPath, '/', 'distorted', '_', str(k).zfill(6), '.mat')
 
-    # showing the restored image just for validation purpose
-    H_inv = inv(H)
-    restoredImg = cv2.warpPerspective(croppedImg,
-                                      H_inv,
-                                      (homography_config["image_height"],
-                                       homography_config["image_width"]))
-    cv2.imshow('Distorted', croppedImg)
-    cv2.imshow("Restored", restoredImg)
-    cv2.waitKey(1)
     cv2.imwrite(saveImgPath, croppedImg)
     scio.savemat(saveMatPath, {'target': target})
+
+    # showing the restored image just for validation purpose
+    border_size = (homography_config['load_width'] - homography_config['image_width']) // 2
+    bordered_cropped = cv2.copyMakeBorder(croppedImg,
+                                          top=border_size,
+                                          bottom=border_size,
+                                          left=border_size,
+                                          right=border_size,
+                                          borderType=cv2.BORDER_CONSTANT,
+                                          value=[0, 0, 0])
+    H_inv = inv(H)
+    restoredImg = cv2.warpPerspective(bordered_cropped,
+                                      H_inv,
+                                      (homography_config["load_height"],
+                                       homography_config["load_width"]))
+
+    # cv2.imshow('Distorted', croppedImg)
+    # cv2.imshow("Restored", restoredImg)
+    overlay = cv2.addWeighted(OriImg, 0.5, restoredImg, 0.5, 1)
+    cv2.imshow('Overlay restored', overlay)
+    cv2.waitKey(0)
+
 
 
 def build_homography(input_dir, output_dir, split_ratio = 0.2):
