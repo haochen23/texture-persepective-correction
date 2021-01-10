@@ -1,4 +1,4 @@
-BASE_DIR=`pwd`"/"`
+BASE_DIR=`pwd`"/"
 ERRORS=""
 
 function error() {
