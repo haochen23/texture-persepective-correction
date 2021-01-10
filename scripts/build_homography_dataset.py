@@ -39,6 +39,7 @@ def generate_data(f_path, k, save_dir, width=512, height=512):
 
     saveImgPath = '%s%s%s%s%s%s' % (trainDisPath, '/', 'distorted', '_', str(k).zfill(6), '.jpg')
     saveMatPath = '%s%s%s%s%s%s' % (trainTargetPath, '/', 'distorted', '_', str(k).zfill(6), '.mat')
+    target = target.detach().cpu().numpy()
 
     cv2.imwrite(saveImgPath, croppedImg)
     scio.savemat(saveMatPath, {'target': target})
@@ -62,7 +63,7 @@ def generate_data(f_path, k, save_dir, width=512, height=512):
     # cv2.imshow("Restored", restoredImg)
     overlay = cv2.addWeighted(OriImg, 0.5, restoredImg, 0.5, 1)
     cv2.imshow('Overlay restored', overlay)
-    cv2.waitKey(0)
+    cv2.waitKey(1)
 
 
 
