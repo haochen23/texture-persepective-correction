@@ -42,7 +42,6 @@ jobs:
 
       - name: Install other dependencies
         run: |
-          pip install -e .
           chmod +x ./scripts/devscripts/install_deps.sh
           ./scripts/devscripts/install_deps.sh "install_deps"
         shell: bash
