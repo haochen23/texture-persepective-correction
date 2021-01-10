@@ -43,7 +43,7 @@ jobs:
       - name: Install other dependencies
         run: |
           chmod +x ./scripts/devscripts/install_deps.sh
-          ./scripts/devscripts/install_deps.sh "install_deps"
+          source ./scripts/devscripts/install_deps.sh; install_deps
         shell: bash
 
       - name: Running unit tests
