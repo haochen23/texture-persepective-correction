@@ -46,6 +46,10 @@ jobs:
           ./scripts/devscripts/install_deps.sh "install_deps"
         shell: bash
 
+      - name: Running unit tests
+        run:
+          pytest
+
       - name: Open issue on failure
         if: ${{ failure() }}
         uses: rishabhgupta/git-action-issue@v2
