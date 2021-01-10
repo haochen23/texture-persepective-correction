@@ -1,6 +1,4 @@
-import pytest
 from config import Config
-import torch
 
 model_config = Config(
     cuda=True,
