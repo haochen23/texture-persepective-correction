@@ -49,22 +49,12 @@ class FlowNetDataset(data.Dataset):
         return len(self.flow_paths)
 
 
-def get_loader(imageDir, flowDir, batch_size):
-    transform = transforms.Compose(
-        [transforms.ToTensor(),
-         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-    )
-    dataset = FlowNetDataset(imageDir, flowDir, transform)
-    data_loader = data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True,
-                                  drop_last=True)
-
-    return data_loader
-
-
 if __name__ == '__main__':
+    from data import get_loader
     data_loader = get_loader('../dataset/processed/train/distorted/',
                              '../dataset/processed/train/flow/',
-                             batch_size=5
+                             batch_size=5,
+                             data_type="flow"
                              )
     print(len(data_loader))
     images, flow_xs, flow_ys = next(iter(data_loader))
