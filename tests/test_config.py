@@ -15,7 +15,7 @@ model_config = Config(
 )
 
 
-def test_config(config):
+def test_config():
         config = model_config
         assert config.cuda == True
         assert config.device == 'cuda'
