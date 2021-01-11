@@ -48,7 +48,7 @@ jobs:
 
       - name: Running unit tests
         run:
-          pytest
+          python -m pytest tests
 
       - name: Open issue on failure
         if: ${{ failure() }}
