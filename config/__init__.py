@@ -11,3 +11,11 @@ homography_config = {
   "image_height": 512,
   "translation_range": 0.05
 }
+
+
+flownet_config = {
+  "load_width": 512,
+  "load_height": 512,
+  "image_width": 256,
+  "image_height": 256
+}
