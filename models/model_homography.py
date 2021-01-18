@@ -113,7 +113,7 @@ class HomographyNet(nn.Module):
 
 if __name__ == '__main__':
     model = HomographyNet()
-    dummy_input = torch.randn([1, 3, 512, 512])
+    dummy_input = torch.randn([5, 3, 512, 512])
     output = model(dummy_input)
     print(output.shape)
     # torch.save(model, 'saved.pt')
