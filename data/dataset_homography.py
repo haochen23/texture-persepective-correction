@@ -55,4 +55,5 @@ if __name__ == '__main__':
     print(len(data_loader))
     images, targets = next(iter(data_loader))
     print(images.shape)
+    print(torch.max(images[0]))
     print(targets.shape)
