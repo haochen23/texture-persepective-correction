@@ -70,6 +70,32 @@ class HomographyDatasetJIT(data.Dataset):
 
 if __name__ == '__main__':
 
+    from data import get_homography_jit_loader
+    from utils.image_utils import get_train_val_paths
+    from config import homography_config
+    data_dir = 'dataset/biglook/'
+
+    train_paths, val_paths = get_train_val_paths(data_dir=data_dir,
+                                                 split_ratio=homography_config['validation_split_ratio'])
+
+
+    train_loader = get_homography_jit_loader(image_paths=train_paths,
+                                             batch_size=5,
+                                             out_t_len=3)
+
+    val_loader = get_homography_jit_loader(image_paths=val_paths,
+                                           batch_size=5,
+                                           out_t_len=3)
+
+    print(len(train_loader), len(val_loader))
+    train_images, train_targets = next(iter(train_loader))
+    val_images, val_targets = next(iter(val_loader))
+
+    print(train_images.shape, train_targets.shape)
+    print(val_images.shape, val_targets.shape)
+
+
+
 
 
 
