@@ -14,8 +14,8 @@ def test_cv2_from_pil():
 
     assert len(cv2_image_bgr.shape) == 3
     assert len(cv2_image_gray.shape) == 2
-    assert all(cv2_image_bgr[:,:,::-1] == np.array(image_rgb))
-    assert all(cv2_image_gray == np.array(image_gray))
+    assert (cv2_image_bgr[:,:,::-1] == np.array(image_rgb)).all()
+    assert (cv2_image_gray == np.array(image_gray)).all()
 
 
 def test_pil_from_cv2():
