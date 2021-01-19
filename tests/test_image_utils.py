@@ -28,8 +28,8 @@ def test_pil_from_cv2():
 
     assert image_rgb.mode == 'RGB'
     assert image_gray.mode == 'L'
-    assert all(cv2_image_bgr[:, :, ::-1] == np.array(image_rgb))
-    assert all(cv2_image_gray == np.array(image_gray))
+    assert (cv2_image_bgr[:, :, ::-1] == np.array(image_rgb)).all()
+    assert (cv2_image_gray == np.array(image_gray)).all()
 
 
 def test_is_image_file():
