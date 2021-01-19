@@ -19,13 +19,26 @@ parser.add_argument('--split_ratio', type=float, default=0.1, help='how much dat
 args = vars(parser.parse_args())
 
 
-def generate_data(f_path, k, save_dir, width=512, height=512):
+def generate_data(f_path, k, save_dir, width=512, height=512, out_len=5):
+    """
+    Generate data from source images
+    Args:
+        f_path:    file path to the image
+        k:         count number for this image
+        save_dir:  save directory
+        width:
+        height:
+        out_len:
+
+    Returns:
+
+    """
 
     OriImg = cv2.imread(f_path)
     OriImg = cv2.resize(OriImg, (width, height))
 
     # obtaining training target
-    target = torch.rand(5)
+    target = torch.rand(out_len)
     H = get_homography(t=target, width=width, height=height)
     distortedImg = cv2.warpPerspective(OriImg, H, (height, width))
     croppedImg = center_crop(distortedImg, new_height=homography_config["image_height"], new_width=homography_config["image_width"])

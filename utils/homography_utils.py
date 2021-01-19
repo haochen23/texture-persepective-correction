@@ -22,9 +22,15 @@ def get_homography(t, width=512, height=512):
     p1 = (array[1] * 2 - 1) / 6000
     p2 = (array[2] * 2 - 1) / 6000
 
-    # add x, y translation parameters, within 5% range
-    tx = int((array[3] * 2 - 1) * width * homography_config['translation_range'])
-    ty = int((array[4] * 2 - 1) * height * homography_config['translation_range'])
+    if array.size == 5:
+        # add x, y translation parameters, within 5% range
+        tx = int((array[3] * 2 - 1) * width * homography_config['translation_range'])
+        ty = int((array[4] * 2 - 1) * height * homography_config['translation_range'])
+    elif array.size == 3:
+        tx = 0
+        ty = 0
+    else:
+        raise NotImplementedError(f"The size of tensor {array.size} is not implemented in get_homography function.")
 
     alpha = math.cos(theta * np.pi)
     beta = -math.sin(theta * np.pi)
