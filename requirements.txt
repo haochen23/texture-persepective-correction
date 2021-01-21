@@ -2,7 +2,6 @@ numba
 torch
 torchvision
 numpy
-tensorflow
 pillow
 opencv-python
 pytest

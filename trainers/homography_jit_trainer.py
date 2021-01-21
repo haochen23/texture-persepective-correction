@@ -1,20 +1,23 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.autograd import Variable
 from utils.tf_logger import TFLogger
 from utils.txt_logger import create_logger
-from config import Config
-from data import get_loader
-from models.model_flownet import FlowNet
-from models.modules.loss import EPELoss
+from config import Config, homography_config
+from data import get_homography_jit_loader
+from models.model_homography import HomographyNet
 import os
+from utils.image_utils import get_train_val_paths
+import s3fs
 
 
-class FlowNetTrainer:
+class HomographyNetTrainer:
+
     def __init__(self, conf):
         """Constructor
-        Inputs:
-        conf:   Config object
+            Inputs:
+                conf:   Config object
         """
         self.cuda = conf.cuda
         self.device = conf.device
@@ -26,21 +29,37 @@ class FlowNetTrainer:
         self.log_interval = conf.log_interval
         self.data_dir = conf.data_dir
         self.save_path = conf.save_path
-        self.layers = conf.layers
-        self.txt_logger = create_logger("FlowNet-Train", "logs/")
+        self.out_len = conf.out_len
+        self.apply_norm = conf.apply_norm
+        self.norm_type = conf.norm_type
+        self.apply_dropout = conf.apply_dropout
+        self.drop_out = conf.drop_out
+        self.s3_bucket = conf.s3_bucket
+        self.s3 = s3fs.S3FileSystem(anon=False)
+
+        # create loggers
+        self.txt_logger = create_logger("HomographyJIT-Train", "logs/")
+        self.tf_logger = TFLogger(r'tensorboard_logs/Homography/')
+
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path, exist_ok=True)
         torch.manual_seed(self.seed)
 
-        # kwargs = {'num_workers': 4, 'pin_memory': True} if self.cuda else {}
-        self.train_loader = get_loader(imageDir=self.data_dir + 'train/distorted',
-                                       flowDir=self.data_dir + 'train/flow/',
-                                       batch_size=self.batch_size)
-        self.val_loader = get_loader(imageDir=self.data_dir + 'val/distorted/',
-                                     flowDir=self.data_dir + 'val/flow/',
-                                     batch_size=self.batch_size)
-        self.model = FlowNet(layers=self.layers)
-        self.criterion = EPELoss()
+        train_paths, val_paths = get_train_val_paths(data_dir=self.data_dir,
+                                                     split_ratio=homography_config['validation_split_ratio'])
+
+        self.train_loader = get_homography_jit_loader(image_paths=train_paths,
+                                                      batch_size=self.batch_size,
+                                                      out_t_len=self.out_len)
+
+        self.val_loader = get_homography_jit_loader(image_paths=val_paths,
+                                                    batch_size=self.batch_size,
+                                                    out_t_len=self.out_len)
+
+        self.model = HomographyNet(apply_norm=self.apply_norm, norm_type=self.norm_type,
+                                   apply_dropout=self.apply_dropout, drop_out=self.drop_out,
+                                   out_len=self.out_len)
+        self.criterion = nn.MSELoss()
         self.globaliter = 0
 
         if torch.cuda.device_count() > 1:
@@ -52,29 +71,29 @@ class FlowNetTrainer:
             self.criterion = self.criterion.cuda()
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        self.tf_logger = TFLogger(r'tensorboard_logs/FlowNet/')
+        self.scheduler = optim.lr_scheduler.CyclicLR(self.optimizer,
+                                                     base_lr=self.lr/30,
+                                                     max_lr=self.lr,
+                                                     step_size_up=2000)
 
     def train_epoch(self, epoch):
         self.txt_logger.info(f"Training epoch {epoch}...")
         self.model.train()
 
-        for batch_idx, (images, flow_xs, flow_ys) in enumerate(self.train_loader):
+        for batch_idx, (images, targets) in enumerate(self.train_loader):
             if self.cuda:
                 images = images.cuda()
-                flow_xs = flow_xs.cuda()
-                flow_ys = flow_ys.cuda()
-
+                targets = targets.cuda()
 
             images = Variable(images)
-            labels_x = Variable(flow_xs)
-            labels_y = Variable(flow_ys)
-            flow_truth = torch.cat([labels_x, labels_y], dim=1)
+            targets = Variable(targets)
 
             self.optimizer.zero_grad()
-            flow_output = self.model(images)
-            loss = self.criterion(flow_output, flow_truth)
+            predicted = self.model(images)
+            loss = self.criterion(predicted, targets)
             loss.backward()
             self.optimizer.step()
+            self.scheduler.step()
 
             if batch_idx % self.log_interval == 0:
                 self.txt_logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
@@ -102,31 +121,30 @@ class FlowNetTrainer:
         self.txt_logger.info(f"Validating epoch {epoch}... ")
         self.model.eval()
         test_loss = 0
+
         with torch.no_grad():
-            for batch_idx, (images, flow_xs, flow_ys) in enumerate(self.val_loader):
+            for batch_idx, (images, targets) in enumerate(self.val_loader):
                 if self.cuda:
                     images = images.cuda()
-                    flow_xs = flow_xs.cuda()
-                    flow_ys = flow_ys.cuda()
-
+                    targets = targets.cuda()
 
                 images = Variable(images)
-                labels_x = Variable(flow_xs)
-                labels_y = Variable(flow_ys)
-                flow_truth = torch.cat([labels_x, labels_y], dim=1)
-                flow_output = self.model(images)
-                loss = self.criterion(flow_output, flow_truth)
+                targets = Variable(targets)
+                predicted = self.model(images)
+                loss = self.criterion(predicted, targets)
                 test_loss += loss.item()
             test_loss /= batch_idx
-        self.txt_logger.info('\nTest set Epoch: {} Average loss: {:.4f}, \n'.format(epoch,  test_loss))
+        self.txt_logger.info('\nTest set Epoch: {} Average loss: {:.4f}, \n'.format(epoch, test_loss))
         info = {'val_loss': test_loss}
         for tag, value in info.items():
             self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
         return test_loss
 
     def train(self):
+
         self.txt_logger.info("Training model...")
         best_valid_loss = float('inf')
+
         for epoch in range(1, self.epochs + 1):
             self.train_epoch(epoch)
             valid_loss = self.test_epoch(epoch)
@@ -136,12 +154,18 @@ class FlowNetTrainer:
                 # save cpu models
                 if self.cuda:
                     if isinstance(self.model, nn.DataParallel):
-                        torch.save(self.model.module.cpu(), f"{self.save_path}model_at_{epoch}.pt")
+                        torch.save(self.model.module.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
                     else:
-                        torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}.pt")
+                        torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
                     self.model.cuda()
                 else:
-                    torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}.pt")
+                    torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
+                # upload model to s3
+                self.s3.put( f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt",
+                             's3://' + self.s3_bucket)
+
+
+
 
 
 if __name__ == '__main__':
@@ -149,20 +173,17 @@ if __name__ == '__main__':
         cuda=True if torch.cuda.is_available() else False,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         seed=2,
-        lr=0.01,
-        epochs=4,
+        lr=0.003,
+        epochs=80,
         save_epoch=False,
-        batch_size=16,
+        batch_size=8,
         log_interval=100,
-        layers=[1, 1, 1, 1, 2],
         data_dir='dataset/processed/',
-        save_path='output/'
+        save_path='homography_v1/',
+        out_len=3,
+        apply_dropout=False,
+        drop_out=0.4,
+        apply_norm=False,
+        norm_type="BatchNorm",
+        s3_bucket="deeppbrmodels/homography_no_norm_no_drop"
     )
-
-    trainer = FlowNetTrainer(model_config)
-    print(trainer.model)
-    # print(next(iter(trainer.train_loader)))
-    print(next(trainer.model.encoder.parameters()).device)
-    print(next(trainer.model.decoder.parameters()).device)
-
-
