@@ -9,6 +9,7 @@ from data import get_homography_jit_loader
 from models.model_homography import HomographyNet
 import os
 from utils.image_utils import get_train_val_paths
+import s3fs
 
 
 class HomographyNetTrainer:
@@ -33,6 +34,8 @@ class HomographyNetTrainer:
         self.norm_type = conf.norm_type
         self.apply_dropout = conf.apply_dropout
         self.drop_out = conf.drop_out
+        self.s3_bucket = conf.s3_bucket
+        self.s3 = s3fs.S3FileSystem(anon=False)
 
         # create loggers
         self.txt_logger = create_logger("HomographyJIT-Train", "logs/")
@@ -151,12 +154,17 @@ class HomographyNetTrainer:
                 # save cpu models
                 if self.cuda:
                     if isinstance(self.model, nn.DataParallel):
-                        torch.save(self.model.module.cpu(), f"{self.save_path}model_at_{epoch}.pt")
+                        torch.save(self.model.module.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
                     else:
-                        torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}.pt")
+                        torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
                     self.model.cuda()
                 else:
-                    torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}.pt")
+                    torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
+                # upload model to s3
+                self.s3.put( f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt",
+                             's3://' + self.s3_bucket)
+
+
 
 
 
@@ -176,5 +184,6 @@ if __name__ == '__main__':
         apply_dropout=False,
         drop_out=0.4,
         apply_norm=False,
-        norm_type="BatchNorm"
+        norm_type="BatchNorm",
+        s3_bucket="deeppbrmodels/homography_no_norm_no_drop"
     )

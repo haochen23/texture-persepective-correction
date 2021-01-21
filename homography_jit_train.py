@@ -19,6 +19,8 @@ parser.add_argument("--dropout_ratio", type=float, default=0.4, help="Drop out l
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--target_len", type=int, default=3, help="target tensor lenght")
 parser.add_argument("--save_path", type=str, default='homography_v1/', help='Model save path.')
+parser.add_argument("--s3_bucket", type=str, default="deeppbrmodels/homography_no_norm_no_drop",
+                    help="s3 bucket to store the saved models")
 args = parser.parse_args()
 
 
@@ -39,6 +41,7 @@ if __name__ == '__main__':
         drop_out=args.dropout_ratio,
         apply_norm=args.apply_norm,
         norm_type=args.norm_type,
+        s3_bucket=args.s3_bucket
     )
 
     trainer = HomographyNetTrainer(model_config)
