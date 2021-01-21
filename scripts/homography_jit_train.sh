@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-python flownet_train.py \
+python homography_jit_train.py \
 --epochs 80 --lr 0.003 --batch_size 8 \
 --dataset_dir ./dataset/biglook/ --seed 42 \
 --save_epoch \

@@ -11,6 +11,8 @@ import os
 from utils.image_utils import get_train_val_paths
 import s3fs
 
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class HomographyNetTrainer:
 
@@ -74,7 +76,8 @@ class HomographyNetTrainer:
         self.scheduler = optim.lr_scheduler.CyclicLR(self.optimizer,
                                                      base_lr=self.lr/30,
                                                      max_lr=self.lr,
-                                                     step_size_up=2000)
+                                                     step_size_up=2000,
+                                                     cycle_momentum=False)
 
     def train_epoch(self, epoch):
         self.txt_logger.info(f"Training epoch {epoch}...")
@@ -162,7 +165,7 @@ class HomographyNetTrainer:
                     torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
                 # upload model to s3
                 self.s3.put( f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt",
-                             's3://' + self.s3_bucket)
+                             's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
 
 
 
@@ -185,5 +188,5 @@ if __name__ == '__main__':
         drop_out=0.4,
         apply_norm=False,
         norm_type="BatchNorm",
-        s3_bucket="deeppbrmodels/homography_no_norm_no_drop"
+        s3_bucket="deeppbrmodels/homography_no_norm_no_drop/"
     )
