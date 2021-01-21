@@ -29,6 +29,10 @@ class HomographyNetTrainer:
         self.data_dir = conf.data_dir
         self.save_path = conf.save_path
         self.out_len = conf.out_len
+        self.apply_norm = conf.apply_norm
+        self.norm_type = conf.norm_type
+        self.apply_dropout = conf.apply_dropout
+        self.drop_out = conf.drop_out
 
         # create loggers
         self.txt_logger = create_logger("HomographyJIT-Train", "logs/")
@@ -42,14 +46,16 @@ class HomographyNetTrainer:
                                                      split_ratio=homography_config['validation_split_ratio'])
 
         self.train_loader = get_homography_jit_loader(image_paths=train_paths,
-                                                      batch_size=5,
-                                                      out_t_len=3)
+                                                      batch_size=self.batch_size,
+                                                      out_t_len=self.out_len)
 
         self.val_loader = get_homography_jit_loader(image_paths=val_paths,
-                                                    batch_size=5,
-                                                    out_t_len=3)
+                                                    batch_size=self.batch_size,
+                                                    out_t_len=self.out_len)
 
-        self.model = HomographyNet(out_len=self.out_len)
+        self.model = HomographyNet(apply_norm=self.apply_norm, norm_type=self.norm_type,
+                                   apply_dropout=self.apply_dropout, drop_out=self.drop_out,
+                                   out_len=self.out_len)
         self.criterion = nn.MSELoss()
         self.globaliter = 0
 
@@ -166,5 +172,9 @@ if __name__ == '__main__':
         log_interval=100,
         data_dir='dataset/processed/',
         save_path='homography_v1/',
-        out_len=3
+        out_len=3,
+        apply_dropout=False,
+        drop_out=0.4,
+        apply_norm=False,
+        norm_type="BatchNorm"
     )

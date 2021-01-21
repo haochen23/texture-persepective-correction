@@ -6,11 +6,12 @@ import torch.nn.functional as F
 import numpy as np
 from torchvision import models
 from matplotlib import pyplot as plt
-
+from models.modules.building_blocks import ConvBlock
 
 class HomographyNet(nn.Module):
 
-    def __init__(self, out_len=5):
+    def __init__(self, apply_norm=False, norm_type='BatchNorm',
+                 apply_dropout=False, drop_out=0.4, out_len=5):
         super(HomographyNet, self).__init__()
         pretrained_model = models.resnet50(True)
         for param in pretrained_model.parameters():
@@ -18,38 +19,53 @@ class HomographyNet(nn.Module):
 
         self.resnet_bridge = nn.Sequential(*list(pretrained_model.children())[:-2])
 
-        conv = nn.Conv2d(in_channels=2048, out_channels=128, kernel_size=3, stride=1, padding=1)
-        nn.init.xavier_normal_(conv.weight)
-        pool = nn.MaxPool2d(kernel_size=3, stride=1, padding=0)
-        relu = nn.ReLU()
+        self.conv1 = ConvBlock(inChannel=2048, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
-        self.conv1 = nn.Sequential(conv, pool, relu)
+        self.conv2 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
-        conv = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1)
-        nn.init.xavier_normal_(conv.weight)
-        dropout = nn.Dropout2d(p=0.4)
+        self.conv3 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
-        self.conv2 = nn.Sequential(conv, pool, relu)
-        self.conv3 = nn.Sequential(conv, pool, relu)
-        self.conv4 = nn.Sequential(conv, pool, relu)
-        self.conv5 = nn.Sequential(conv, pool, relu)
+        self.conv4 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
-        conv = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1)
-        nn.init.xavier_normal_(conv.weight)
-        pool = nn.MaxPool2d(kernel_size=2, stride=1, padding=0)
+        self.conv5 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
-        self.conv6 = nn.Sequential(conv, pool, relu)
-        self.conv7 = nn.Sequential(conv, pool, relu)
-        self.conv8 = nn.Sequential(conv, pool, relu)
+        self.conv6 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
-        conv = nn.Conv2d(in_channels=128, out_channels=128, kernel_size=2, stride=1, padding=1)
-        nn.init.xavier_normal_(conv.weight)
-        pool = nn.MaxPool2d(kernel_size=2, stride=1, padding=0)
+        self.conv7 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
-        self.conv9 = nn.Sequential(conv, pool, relu)
+        self.conv8 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
+
+        self.conv9 = ConvBlock(inChannel=128, outChannel=128, kernel_size=3,
+                               stride=1, padding=1, apply_norm=apply_norm,
+                               norm_type=norm_type, apply_dropout=apply_dropout,
+                               drop_out=drop_out)
 
         self.fc_block = nn.Sequential(
-            nn.Linear(1152, 1024),
+            nn.Linear(6272, 1024),
             nn.ReLU(),
             nn.Linear(1024, 512),
             nn.ReLU(),
@@ -116,4 +132,4 @@ if __name__ == '__main__':
     dummy_input = torch.randn([5, 3, 512, 512])
     output = model(dummy_input)
     print(output.shape)
-    # torch.save(model, 'saved.pt')
+    torch.save(model, 'saved.pt')

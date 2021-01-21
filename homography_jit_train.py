@@ -12,6 +12,10 @@ parser.add_argument('--lr', type=float, default=0.003)
 parser.add_argument('--batch_size', type=int, default=5)
 parser.add_argument("--dataset_dir", type=str, default='dataset/biglook/')
 parser.add_argument("--save_epoch", default=False, action='store_true')
+parser.add_argument("--apply_norm", default=False, action='store_ture')
+parser.add_argument("--norm_type", type=str, default="BatchNorm", help="Type of Normalization Layer, ['BatchNorm', 'InstanceNorm']")
+parser.add_argument("--apply_dropout", default=False, action="store_ture")
+parser.add_argument("--dropout_ratio", type=float, default=0.4, help="Drop out layer ratio")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--target_len", type=int, default=3, help="target tensor lenght")
 parser.add_argument("--save_path", type=str, default='homography_v1/', help='Model save path.')
@@ -30,7 +34,11 @@ if __name__ == '__main__':
         log_interval=args.log_interval,
         data_dir=args.dataset_dir,
         save_path=args.save_path,
-        out_len=args.target_len
+        out_len=args.target_len,
+        apply_dropout=args.apply_dropout,
+        drop_out=args.dropout_ratio,
+        apply_norm=args.apply_norm,
+        norm_type=args.norm_type,
     )
 
     trainer = HomographyNetTrainer(model_config)

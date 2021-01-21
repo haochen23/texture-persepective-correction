@@ -3,6 +3,37 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class ConvBlock(nn.Module):
+    def __init__(self, inChannel, outChannel, kernel_size,
+                 stride, padding, apply_norm=False,
+                 norm_type='BatchNorm', apply_dropout=False, drop_out=0.4):
+        super(ConvBlock, self).__init__()
+        conv_block = []
+        conv = nn.Conv2d(in_channels=inChannel, out_channels=outChannel, kernel_size=kernel_size, stride=stride,
+                         padding=padding)
+        nn.init.xavier_normal_(conv.weight)
+        conv_block += [conv]
+        if apply_norm:
+            if norm_type.lower() == "batchnorm":
+                norm_layer = nn.BatchNorm2d(outChannel)
+            elif norm_type.lower() == "instancenorm":
+                norm_layer = nn.InstanceNorm2d(outChannel)
+            else:
+                raise NotImplementedError(f"{norm_type} is not implemented in ConvBlock")
+            conv_block += [norm_layer]
+
+        conv_block += [nn.MaxPool2d(kernel_size=2, stride=1, padding=0),
+                       nn.ReLU()]
+
+        if apply_dropout:
+            conv_block += [nn.Dropout(drop_out)]
+
+        self.conv_block = nn.Sequential(*conv_block)
+
+    def forward(self, x):
+        return self.conv_block(x)
+
+
 class plainEncoderBlock(nn.Module):
     def __init__(self, inChannel, outChannel, stride):
         super(plainEncoderBlock, self).__init__()
@@ -98,7 +129,3 @@ class resDecoderBlock(nn.Module):
         out += residual
         out = F.relu(out)
         return out
-
-
-
-

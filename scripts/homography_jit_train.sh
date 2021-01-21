@@ -6,3 +6,7 @@ python flownet_train.py \
 --save_path homography_v1/ \
 --log_interval 5 \
 --target_len 3
+--apply_norm \
+--norm_type BatchNorm \
+--apply_dropout \
+--dropout_ratio 0.4
