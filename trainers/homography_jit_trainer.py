@@ -37,6 +37,8 @@ class HomographyNetTrainer:
         self.apply_dropout = conf.apply_dropout
         self.drop_out = conf.drop_out
         self.s3_bucket = conf.s3_bucket
+        self.restore_model = conf.restore_model
+        self.restore_at = conf.restore_at
         self.s3 = s3fs.S3FileSystem(anon=False)
 
         # create loggers
@@ -61,6 +63,9 @@ class HomographyNetTrainer:
         self.model = HomographyNet(apply_norm=self.apply_norm, norm_type=self.norm_type,
                                    apply_dropout=self.apply_dropout, drop_out=self.drop_out,
                                    out_len=self.out_len)
+        self.starting_at = 1
+        if self.restore_model:
+            self.restore_checkpoint(restore_at=self.restore_at)
         self.criterion = nn.MSELoss()
         self.globaliter = 0
 
@@ -148,7 +153,8 @@ class HomographyNetTrainer:
         self.txt_logger.info("Training model...")
         best_valid_loss = float('inf')
 
-        for epoch in range(1, self.epochs + 1):
+        # train another self.epochs epochs
+        for epoch in range(self.starting_at, self.starting_at + self.epochs + 1):
             self.train_epoch(epoch)
             valid_loss = self.test_epoch(epoch)
             if valid_loss < best_valid_loss:
@@ -166,6 +172,38 @@ class HomographyNetTrainer:
                 # upload model to s3
                 self.s3.put( f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt",
                              's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
+
+    def restore_checkpoint(self, restore_at=None):
+        """
+        restore checkpoint from s3 bucket or local folder if exists
+        Args:
+            restore_at:  int, epoch or checkpoint number to be restored
+
+        Returns:
+
+        """
+        if restore_at is None:
+            try:
+                restore_at = int(sorted(self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}"))[-1].split('_')[-2])
+            except IndexError as ex:
+                pass
+
+        checkpoint = [_ for _ in self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}") if f"model_at_{restore_at}_loss" in _]
+        if len(checkpoint) > 0:
+            checkpoint = checkpoint[0]
+            self.starting_at = restore_at
+            # if local directory contains the file, load from local
+            if os.path.isfile(self.save_path + checkpoint):
+                self.model = torch.load(self.save_path + checkpoint)
+            else:
+                # download checkpoint from s3
+                self.s3.get('s3://' + self.s3_bucket + f"{self.save_path}" + checkpoint, self.save_path)
+                self.model = torch.load(self.save_path + checkpoint)
+
+        else:
+            return
+
+
 
 
 
@@ -188,5 +226,7 @@ if __name__ == '__main__':
         drop_out=0.4,
         apply_norm=False,
         norm_type="BatchNorm",
-        s3_bucket="deeppbrmodels/homography_no_norm_no_drop/"
+        s3_bucket="deeppbrmodels/homography_no_norm_no_drop/",
+        restore_model=True,
+        restore_at=None
     )
