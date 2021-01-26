@@ -48,7 +48,7 @@ class HomographyInference:
             output = self.model(image).squeeze()
 
         # obtain the inverse homography matrix from the output tensor
-        H_inv = get_homography(output,
+        H_inv = decode_output(output,
                  width=homography_config['image_width'],
                  height=homography_config['image_height'])
 
