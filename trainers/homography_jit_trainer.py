@@ -142,12 +142,12 @@ class HomographyNetTrainer:
         if self.save_epoch:
             if self.cuda:
                 if isinstance(self.model, nn.DataParallel):
-                    torch.save(self.model.module.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                    torch.save(self.model.module.cpu(), self.save_path + f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
                 else:
-                    torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                    torch.save(self.model.cpu(), self.save_path + f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
                 self.model.cuda()
             else:
-                torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                torch.save(self.model.cpu(), self.save_path + f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
             self.s3.put(f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt",
                         's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
         return test_loss
