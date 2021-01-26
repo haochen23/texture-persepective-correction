@@ -4,6 +4,8 @@ import math
 from numpy.linalg import inv
 import cv2
 from config import homography_config
+from PIL import Image
+
 
 def get_homography(t, width=512, height=512):
     """
@@ -36,8 +38,8 @@ def get_homography(t, width=512, height=512):
     beta = -math.sin(theta * np.pi)
 
     # rotation from centre, and x, y translation
-    rotation_matrix = np.array([[alpha, beta, (1 - alpha) * width/2 - beta * height/2 + tx],
-                                [-beta, alpha, beta * width/2 + (1 - alpha) * height/2 + ty],
+    rotation_matrix = np.array([[alpha, beta, (1 - alpha) * width / 2 - beta * height / 2 + tx],
+                                [-beta, alpha, beta * width / 2 + (1 - alpha) * height / 2 + ty],
                                 [0, 0, 1]])
 
     # rotation from top left corner
@@ -92,12 +94,85 @@ def center_crop(img, new_height=256, new_width=256):
         center = np.array(img.shape[:2]) / 2
         x = center[1] - new_width / 2
         y = center[0] - new_height / 2
-        cropped_img = img[int(y):int(y+new_height), int(x):int(x+new_width)]
+        cropped_img = img[int(y):int(y + new_height), int(x):int(x + new_width)]
 
     return cropped_img
 
 
+def crop_least_square(image):
+    """
+    Creates the least square centre-cropped image
+    Args:
+        image: PIL Image
+    Returns:
+        cropped least square image
+    """
+    if image.width > image.height:
+        delta = int((image.width - image.height) / 2)
+        return image.crop((delta, 0, image.height + delta, image.height))
+    else:
+        delta = int((image.height - image.width) / 2)
+        return image.crop((0, delta, image.width, image.width + delta))
 
+
+def pad_and_crop_to_size(image, to_size=1024):
+    """
+    pad image (or crop) to to_size
+    Args:
+        image: PIL image object, RGB
+        to_size: target square image size
+
+    Returns:
+
+    """
+    width, height = image.size
+    if width >= to_size and height < to_size:
+        # only need to add zeros at top and bottom
+        margin = image.width - image.height
+        top = int(margin / 2)
+        new_image = Image.new(image.mode, (image.width, image.height + margin), (0, 0, 0))
+        new_image.paste(image, (0, top))
+        new_image = Image.fromarray(center_crop(np.array(new_image),
+                                                new_height=to_size,
+                                                new_width=to_size))
+    elif width < to_size and height >= to_size:
+        # only need to add zeros at left and right
+        margin = image.height - image.width
+        left = int(margin / 2)
+        new_image = Image.new(image.mode, (image.width + margin, image.height), (0, 0, 0))
+        new_image.paste(image, (left, 0))
+        new_image = Image.fromarray(center_crop(np.array(new_image),
+                                                new_height=to_size,
+                                                new_width=to_size))
+    elif width >= to_size and height >= to_size:
+        # do no need to add zero paddings
+        new_image = Image.fromarray(center_crop(np.array(image),
+                                                new_height=to_size,
+                                                new_width=to_size))
+    else:
+        # need to add zeros to left right top bottom
+        margin_h = to_size - width
+        margin_v = to_size - height
+        top = int(margin_v / 2)
+        left = int(margin_h /2)
+
+        new_image = cv2.copyMakeBorder(np.array(image),
+                                       borderType=cv2.BORDER_CONSTANT,
+                                       top=top,
+                                       bottom=top,
+                                       left=left,
+                                       right=left,
+                                       value=[0, 0, 0])
+        new_image = Image.fromarray(new_image)
+
+    return new_image
+
+
+if __name__ == '__main__':
+    image = Image.open('images/1.png').convert('RGB')
+    image = image.resize((1024, 1024))
+    new_image = pad_and_crop_to_size(image)
+    new_image.show()
 
 
 
