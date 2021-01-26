@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 python homography_jit_train.py \
---epochs 30 --lr 0.003 --batch_size 8 \
+--epochs 50 --lr 0.003 --batch_size 8 \
 --dataset_dir ./dataset/biglook/ --seed 42 \
 --save_epoch \
 --save_path homography_batchnorm_dropout/ \

@@ -114,16 +114,7 @@ class HomographyNetTrainer:
             for tag, value in info.items():
                 self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
 
-            # saving model at every epoch
-            if self.save_epoch:
-                if self.cuda:
-                    if isinstance(self.model, nn.DataParallel):
-                        torch.save(self.model.module.cpu(), self.save_path + f"epoch-{epoch}.pt")
-                    else:
-                        torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
-                    self.model.cuda()
-                else:
-                    torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+
 
     def test_epoch(self, epoch):
         self.txt_logger.info(f"Validating epoch {epoch}... ")
@@ -146,6 +137,19 @@ class HomographyNetTrainer:
         info = {'val_loss': test_loss}
         for tag, value in info.items():
             self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
+
+        # saving model at every epoch
+        if self.save_epoch:
+            if self.cuda:
+                if isinstance(self.model, nn.DataParallel):
+                    torch.save(self.model.module.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                else:
+                    torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+                self.model.cuda()
+            else:
+                torch.save(self.model.cpu(), self.save_path + f"epoch-{epoch}.pt")
+            self.s3.put(f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt",
+                        's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
         return test_loss
 
     def train(self):
@@ -170,8 +174,8 @@ class HomographyNetTrainer:
                 else:
                     torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
                 # upload model to s3
-                self.s3.put( f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt",
-                             's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
+                # self.s3.put( f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt",
+                #              's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
 
     def restore_checkpoint(self, restore_at=None):
         """

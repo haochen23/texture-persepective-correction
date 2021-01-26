@@ -2,6 +2,7 @@ from trainers.homography_jit_trainer import HomographyNetTrainer
 import torch
 from config import Config
 import argparse
+from utils import none_or_int
 
 
 parser = argparse.ArgumentParser(description='GeoNetM')
@@ -22,7 +23,7 @@ parser.add_argument("--save_path", type=str, default='homography_v1/', help='Mod
 parser.add_argument("--s3_bucket", type=str, default="deeppbrmodels/homography_no_norm_no_drop",
                     help="s3 bucket to store the saved models")
 parser.add_argument("--restore_model", type=bool, default=True, help="whether to restore previous checkpoints")
-parser.add_argument("--restore_at", type=int, default=None, help="The checkpoint or epoch number to restore")
+parser.add_argument("--restore_at", type=int, default=none_or_int, help="The checkpoint or epoch number to restore")
 args = parser.parse_args()
 
 
