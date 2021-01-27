@@ -59,7 +59,7 @@ def get_homography(t, width=512, height=512):
     return H
 
 
-def decode_output(t, width=512, height=512):
+def decode_output(t, width=512, height=512, scale=1.0):
     """
     This function decodes the output from the homography model
     :param t: a size 5 torch tensor float32
@@ -71,6 +71,10 @@ def decode_output(t, width=512, height=512):
 
     H = get_homography(t=t, width=width, height=height)
     H_inv = inv(H)
+    H_inv[2, 0] /= scale
+    H_inv[2, 1] /= scale
+    H_inv[0, 2] *= scale
+    H_inv[1, 2] *= scale
 
     return H_inv
 
