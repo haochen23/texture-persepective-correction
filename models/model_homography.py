@@ -115,7 +115,6 @@ class HomographyNet(nn.Module):
             branch_output = torch.flatten(branch_output, 1)
             branch_output = self.fc_blocks[i](branch_output)
             outs.append(branch_output)
-            print(branch_output)
 
         output = torch.cat(outs, dim=1)
 
@@ -160,5 +159,7 @@ if __name__ == '__main__':
     output2 = model(dummy_input_2)
     print(output)
     print(output2)
+    for param in model.parameters():
+        print(param.data)
     torch.save(model, 'saved.pt')
 

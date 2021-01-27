@@ -190,7 +190,8 @@ class HomographyNetTrainer:
         """
         if restore_at is None:
             try:
-                restore_at = int(sorted(self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}"))[-1].split('_')[-2])
+                restore_at = int(sorted(self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}"),
+                                        key=lambda x: int(x.split('_')[-2]))[-1].split('_')[-2])
             except IndexError as ex:
                 pass
 
@@ -220,20 +221,20 @@ if __name__ == '__main__':
         cuda=True if torch.cuda.is_available() else False,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         seed=42,
-        lr=0.003,
+        lr=0.001,
         epochs=200,
         save_epoch=True,
         batch_size=8,
         log_interval=5,
         data_dir='dataset/biglook/',
-        save_path='homography_batch_nodropout/',
+        save_path='homography_mutlihead_nodropout/',
         out_len=3,
         apply_dropout=False,
         drop_out=0.4,
         apply_norm=True,
         norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
-        restore_model=True,
+        restore_model=False,
         restore_at=None
     )
 
