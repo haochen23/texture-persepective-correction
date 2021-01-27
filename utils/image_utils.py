@@ -58,6 +58,39 @@ def get_train_val_paths(data_dir, split_ratio=0.2):
     return train_paths, val_paths
 
 
+def tensor2im(image_tensor, imtype=np.uint8, normalize=True, tile=False):
+    if isinstance(image_tensor, list):
+        image_numpy = []
+        for i in range(len(image_tensor)):
+            image_numpy.append(tensor2im(image_tensor[i], imtype, normalize))
+        return image_numpy
+
+    if image_tensor.dim() == 4:
+        # transform each image in the batch
+        images_np = []
+        for b in range(image_tensor.size(0)):
+            one_image = image_tensor[b]
+            one_image_np = tensor2im(one_image, normalize=normalize)
+            images_np.append(one_image_np.reshape(1, *one_image_np.shape))
+        images_np = np.concatenate(images_np, axis=0)
+        if tile:
+            images_tiled = tile_images(images_np)
+            return images_tiled
+        else:
+            return images_np
+
+    if image_tensor.dim() == 2:
+        image_tensor = image_tensor.unsqueeze(0)
+    image_numpy = image_tensor.detach().cpu().float().numpy()
+    if normalize:
+        image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
+    else:
+        image_numpy = np.transpose(image_numpy, (1, 2, 0)) * 255.0
+    image_numpy = np.clip(image_numpy, 0, 255)
+    if image_numpy.shape[2] == 1:
+        image_numpy = image_numpy[:, :, 0]
+    return image_numpy.astype(imtype)
+
 if __name__ == '__main__':
     data_dir = "dataset/biglook/"
     train_paths, test_paths = get_train_val_paths(data_dir, split_ratio=0.1)
