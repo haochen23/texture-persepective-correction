@@ -20,7 +20,7 @@ parser.add_argument("--dropout_ratio", type=float, default=0.4, help="Drop out l
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--target_len", type=int, default=3, help="target tensor lenght")
 parser.add_argument("--save_path", type=str, default='homography_v1/', help='Model save path.')
-parser.add_argument("--s3_bucket", type=str, default="deeppbrmodels/homography_no_norm_no_drop",
+parser.add_argument("--s3_bucket", type=str, required=True,
                     help="s3 bucket to store the saved models")
 parser.add_argument("--restore_model", type=bool, default=True, help="whether to restore previous checkpoints")
 parser.add_argument("--restore_at", type=int, default=none_or_int, help="The checkpoint or epoch number to restore")

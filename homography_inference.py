@@ -48,11 +48,16 @@ class HomographyInference:
             output = self.model(image).squeeze()
 
         # obtain the inverse homography matrix from the output tensor
-        H_inv = decode_output(output,
-                 width=homography_config['image_width'],
-                 height=homography_config['image_height'])
 
         padded_image = pad_and_crop_to_size(imageOrig, to_size=ls_height * 2)
+        scale = padded_image.height / homography_config['load_height']
+        H_inv = decode_output(output,
+                              width=homography_config['load_width'],
+                              height=homography_config['load_height'],
+                              scale=scale)
+
+
+
         corrected_image = Image.fromarray(cv2.warpPerspective(np.array(padded_image),
                                                               H_inv,
                                                               (padded_image.width, padded_image.height)))
@@ -64,9 +69,9 @@ if __name__ == '__main__':
                                     transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                                     ])
-    self = HomographyInference(model_path="pretrained/deeppbrmodels/homography_batchnorm_dropout/model_at_18_loss(0.07712149694561958).pt",
+    self = HomographyInference(model_path="pretrained/model_at_25_loss(0.06869517415761947).pt",
                                transform=transform)
 
-    image = Image.open('images/1_distoted.png').convert('RGB')
+    image = Image.open('images/1_distoted.png').convert('RGB').resize((1024, 1024))
 
     corrected_image = self.inference(image)

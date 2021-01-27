@@ -230,7 +230,7 @@ if __name__ == '__main__':
         drop_out=0.4,
         apply_norm=False,
         norm_type="BatchNorm",
-        s3_bucket="deeppbrmodels/homography_no_norm_no_drop/",
+        s3_bucket="deeppbrmodels/",
         restore_model=True,
         restore_at=None
     )
