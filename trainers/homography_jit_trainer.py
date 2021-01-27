@@ -66,12 +66,12 @@ class HomographyNetTrainer:
         self.starting_at = 1
         if self.restore_model:
             self.restore_checkpoint(restore_at=self.restore_at)
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.MSELoss(reduction='sum')
         self.globaliter = 0
 
-        if torch.cuda.device_count() > 1:
-            print("Let's use", torch.cuda.device_count(), "GPUs!")
-            self.model = nn.DataParallel(self.model)
+        # if torch.cuda.device_count() > 1:
+        #     print("Let's use", torch.cuda.device_count(), "GPUs!")
+        #     self.model = nn.DataParallel(self.model)
 
         if self.cuda:
             self.model = self.model.cuda()
@@ -79,7 +79,7 @@ class HomographyNetTrainer:
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         self.scheduler = optim.lr_scheduler.CyclicLR(self.optimizer,
-                                                     base_lr=self.lr/30,
+                                                     base_lr=self.lr/50,
                                                      max_lr=self.lr,
                                                      step_size_up=2000,
                                                      cycle_momentum=False)
@@ -98,6 +98,8 @@ class HomographyNetTrainer:
 
             self.optimizer.zero_grad()
             predicted = self.model(images)
+            print(f"Predicted value for batch {batch_idx}")
+            print(predicted)
             loss = self.criterion(predicted, targets)
             loss.backward()
             self.optimizer.step()
@@ -217,20 +219,23 @@ if __name__ == '__main__':
     model_config = Config(
         cuda=True if torch.cuda.is_available() else False,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-        seed=2,
+        seed=42,
         lr=0.003,
-        epochs=80,
-        save_epoch=False,
+        epochs=200,
+        save_epoch=True,
         batch_size=8,
-        log_interval=100,
-        data_dir='dataset/processed/',
-        save_path='homography_v1/',
+        log_interval=5,
+        data_dir='dataset/biglook/',
+        save_path='homography_batch_nodropout/',
         out_len=3,
         apply_dropout=False,
         drop_out=0.4,
-        apply_norm=False,
+        apply_norm=True,
         norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
         restore_model=True,
         restore_at=None
     )
+
+    trainer = HomographyNetTrainer(model_config)
+    trainer.train()

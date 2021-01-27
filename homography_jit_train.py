@@ -23,7 +23,7 @@ parser.add_argument("--save_path", type=str, default='homography_v1/', help='Mod
 parser.add_argument("--s3_bucket", type=str, required=True,
                     help="s3 bucket to store the saved models")
 parser.add_argument("--restore_model", type=bool, default=True, help="whether to restore previous checkpoints")
-parser.add_argument("--restore_at", type=int, default=none_or_int, help="The checkpoint or epoch number to restore")
+parser.add_argument("--restore_at", type=none_or_int, default=None, help="The checkpoint or epoch number to restore")
 args = parser.parse_args()
 
 

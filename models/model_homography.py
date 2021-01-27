@@ -79,7 +79,8 @@ class HomographyNet(nn.Module):
             nn.ReLU(),
             nn.Linear(32, 16),
             nn.ReLU(),
-            nn.Linear(16, out_len))
+            nn.Linear(16, out_len),
+            nn.Sigmoid())
 
     def forward(self, x):
         x = self.resnet_bridge(x)
