@@ -115,7 +115,8 @@ class HomographyNet(nn.Module):
             branch_output = torch.flatten(branch_output, 1)
             branch_output = self.fc_blocks[i](branch_output)
             outs.append(branch_output)
-        print(outs)
+            print(branch_output)
+
         output = torch.cat(outs, dim=1)
 
         return output
@@ -152,9 +153,12 @@ class HomographyNet(nn.Module):
 
 if __name__ == '__main__':
     model = HomographyNet(out_len=3)
-    dummy_input = torch.randn([5, 3, 512, 512])
     model.eval()
-    print(dummy_input)
+    dummy_input = torch.ones([5, 3, 512, 512])
+    dummy_input_2 = torch.ones([5, 3, 512, 512]) *.5
     output = model(dummy_input)
+    output2 = model(dummy_input_2)
     print(output)
-    # torch.save(model, 'saved.pt')
+    print(output2)
+    torch.save(model, 'saved.pt')
+

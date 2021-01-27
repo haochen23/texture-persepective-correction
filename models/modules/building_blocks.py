@@ -11,7 +11,7 @@ class ConvBlock(nn.Module):
         conv_block = []
         conv = nn.Conv2d(in_channels=inChannel, out_channels=outChannel, kernel_size=kernel_size, stride=stride,
                          padding=padding)
-        # nn.init.xavier_normal_(conv.weight)
+        nn.init.xavier_normal_(conv.weight)
         conv_block += [conv]
         if apply_norm:
             if norm_type.lower() == "batchnorm":
