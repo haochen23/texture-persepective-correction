@@ -8,7 +8,7 @@ from config import Config, homography_config
 from data import get_homography_jit_loader
 from models.model_homography import HomographyNet
 import os
-from utils.image_utils import get_train_val_paths
+from utils.image_utils import get_train_val_paths, plot_grad_flow
 import s3fs
 
 from PIL import ImageFile
@@ -109,6 +109,7 @@ class HomographyNetTrainer:
                 self.txt_logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(images), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.item()))
+                plot_grad_flow(self.model.named_parameters())
 
             # ============ TensorBoard logging ============#
             self.globaliter += 1
