@@ -216,7 +216,7 @@ class HomographyNetTrainer:
                 self.model = torch.load(self.save_path + checkpoint)
             else:
                 # download checkpoint from s3
-                self.s3.get('s3://' + self.s3_bucket + f"{self.save_path}" + checkpoint, self.save_path)
+                self.s3.get(checkpoint, self.save_path+checkpoint)
                 self.model = torch.load(self.save_path + checkpoint)
 
         else:
