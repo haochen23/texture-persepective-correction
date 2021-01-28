@@ -98,8 +98,8 @@ class HomographyNetTrainer:
 
             self.optimizer.zero_grad()
             predicted = self.model(images)
-            print(f"Predicted value for batch {batch_idx}")
-            print(predicted)
+            print(f" True vs Predicted value for batch {batch_idx}")
+            print(targets, predicted)
             loss = self.criterion(predicted, targets)
             loss.backward()
             self.optimizer.step()
@@ -162,6 +162,8 @@ class HomographyNetTrainer:
         # train another self.epochs epochs
         for epoch in range(self.starting_at, self.starting_at + self.epochs + 1):
             self.train_epoch(epoch)
+            if epoch == self.starting_at:
+                self.tf_logger.writer.add_graph(self.model,input_to_model=torch.rand([8, 3, 512, 512], device="cuda"))
             valid_loss = self.test_epoch(epoch)
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
@@ -221,7 +223,7 @@ if __name__ == '__main__':
         cuda=True if torch.cuda.is_available() else False,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         seed=42,
-        lr=0.001,
+        lr=0.01,
         epochs=200,
         save_epoch=True,
         batch_size=8,
@@ -232,11 +234,11 @@ if __name__ == '__main__':
         apply_dropout=False,
         drop_out=0.4,
         apply_norm=True,
-        norm_type="BatchNorm",
+        norm_type="InstanceNorm",
         s3_bucket="deeppbrmodels/",
         restore_model=False,
         restore_at=None
     )
 
-    trainer = HomographyNetTrainer(model_config)
-    trainer.train()
+    self = HomographyNetTrainer(model_config)
+    self.train()
