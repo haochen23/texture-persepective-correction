@@ -66,7 +66,7 @@ class HomographyNetTrainer:
         self.starting_at = 1
         if self.restore_model:
             self.restore_checkpoint(restore_at=self.restore_at)
-            self.starting_at = self.restore_at
+
         self.criterion = nn.MSELoss(reduction='sum')
         self.globaliter = 0
 
@@ -202,12 +202,14 @@ class HomographyNetTrainer:
             try:
                 restore_at = int(sorted(self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}"),
                                         key=lambda x: int(x.split('_')[-2]))[-1].split('_')[-2])
-            except IndexError as ex:
-                pass
+            except Exception as ex:
+                self.txt_logger.error("Checkpoints not found in S3.")
+                return
 
         checkpoint = [_ for _ in self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}") if f"model_at_{restore_at}_loss" in _]
         if len(checkpoint) > 0:
             checkpoint = checkpoint[0]
+            self.txt_logger.info(f"Restoring {checkpoint}")
             self.starting_at = restore_at
             # if local directory contains the file, load from local
             if os.path.isfile(self.save_path + checkpoint):
@@ -239,7 +241,7 @@ if __name__ == '__main__':
         apply_norm=True,
         norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
-        restore_model=False,
+        restore_model=True,
         restore_at=None
     )
 
