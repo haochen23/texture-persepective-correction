@@ -60,7 +60,47 @@ def get_train_val_paths(data_dir, split_ratio=0.2):
     return train_paths, val_paths
 
 
+def tile_images(imgs, picturesPerRow=4):
+    """
+    Make image tiles
+    Args:
+        imgs:  input images
+        picturesPerRow:  how many tiles per row
+
+    Returns:
+        tiled images
+
+    """
+
+    # Padding
+    if imgs.shape[0] % picturesPerRow == 0:
+        rowPadding = 0
+    else:
+        rowPadding = picturesPerRow - imgs.shape[0] % picturesPerRow
+    if rowPadding > 0:
+        imgs = np.concatenate([imgs, np.zeros((rowPadding, *imgs.shape[1:]), dtype=imgs.dtype)], axis=0)
+
+    # Tiling Loop (The conditionals are not necessary anymore)
+    tiled = []
+    for i in range(0, imgs.shape[0], picturesPerRow):
+        tiled.append(np.concatenate([imgs[j] for j in range(i, i + picturesPerRow)], axis=1))
+
+    tiled = np.concatenate(tiled, axis=0)
+    return tiled
+
+
 def tensor2im(image_tensor, imtype=np.uint8, normalize=True, tile=False):
+    """
+    Converting a torch tensor to numpy arrays
+    Args:
+        image_tensor: torch tensor
+        imtype:       image type
+        normalize:    has the torch tensor been normalized
+        tile:         make the images into tiles
+
+    Returns:
+
+    """
     if isinstance(image_tensor, list):
         image_numpy = []
         for i in range(len(image_tensor)):
@@ -123,6 +163,7 @@ def plot_grad_flow(named_parameters):
                 Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
     plt.show()
     plt.savefig('weights_gradient_flow.png')
+
 
 if __name__ == '__main__':
     data_dir = "dataset/biglook/"

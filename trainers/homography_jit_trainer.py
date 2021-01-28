@@ -66,6 +66,7 @@ class HomographyNetTrainer:
         self.starting_at = 1
         if self.restore_model:
             self.restore_checkpoint(restore_at=self.restore_at)
+            self.starting_at = self.restore_at
         self.criterion = nn.MSELoss(reduction='sum')
         self.globaliter = 0
 
@@ -143,17 +144,23 @@ class HomographyNetTrainer:
 
         # saving model at every epoch
         if self.save_epoch:
-            if self.cuda:
-                if isinstance(self.model, nn.DataParallel):
-                    torch.save(self.model.module.cpu(), f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
-                else:
-                    torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
-                self.model.cuda()
-            else:
-                torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
-            self.s3.put(f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt",
-                        's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({test_loss}).pt")
+            self.save_checkpoint(on_cuda=self.cuda,
+                                 model_path=self.save_path,
+                                 epoch_num=epoch,
+                                 loss_value=test_loss)
+
         return test_loss
+
+    def save_checkpoint(self, on_cuda, model_path, epoch_num, loss_value):
+        if on_cuda:
+            if isinstance(self.model, nn.DataParallel):
+                torch.save(self.model.module.cpu(), f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
+            else:
+                torch.save(self.model.cpu(), f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
+            self.model.cuda()
+        # Upload to s3
+        self.s3.put(f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt",
+                    's3://' + self.s3_bucket + f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
 
     def train(self):
 
@@ -170,14 +177,14 @@ class HomographyNetTrainer:
                 best_valid_loss = valid_loss
                 self.txt_logger.info(f"A better model found, Epoch {epoch}. Saving the best model...")
                 # save cpu models
-                if self.cuda:
-                    if isinstance(self.model, nn.DataParallel):
-                        torch.save(self.model.module.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
-                    else:
-                        torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
-                    self.model.cuda()
-                else:
-                    torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
+                # if self.cuda:
+                #     if isinstance(self.model, nn.DataParallel):
+                #         torch.save(self.model.module.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
+                #     else:
+                #         torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
+                #     self.model.cuda()
+                # else:
+                #     torch.save(self.model.cpu(), f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
                 # upload model to s3
                 # self.s3.put( f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt",
                 #              's3://' + self.s3_bucket + f"{self.save_path}model_at_{epoch}_loss({best_valid_loss}).pt")
@@ -214,20 +221,15 @@ class HomographyNetTrainer:
             return
 
 
-
-
-
-
-
 if __name__ == '__main__':
     model_config = Config(
         cuda=True if torch.cuda.is_available() else False,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         seed=42,
-        lr=0.01,
-        epochs=200,
+        lr=0.005,
+        epochs=500,
         save_epoch=True,
-        batch_size=8,
+        batch_size=16,
         log_interval=5,
         data_dir='dataset/biglook/',
         save_path='homography_mutlihead_nodropout/',
@@ -235,7 +237,7 @@ if __name__ == '__main__':
         apply_dropout=False,
         drop_out=0.4,
         apply_norm=True,
-        norm_type="InstanceNorm",
+        norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
         restore_model=False,
         restore_at=None
