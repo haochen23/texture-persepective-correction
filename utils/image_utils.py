@@ -5,6 +5,8 @@ import os
 from config import IMG_EXTENSIONS
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import matplotlib
+matplotlib.rcParams['figure.figsize'] = (20, 20)
 
 def pil_from_cv2(image):
     if len(image.shape) == 3:

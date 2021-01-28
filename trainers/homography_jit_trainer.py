@@ -67,7 +67,8 @@ class HomographyNetTrainer:
         if self.restore_model:
             self.restore_checkpoint(restore_at=self.restore_at)
 
-        self.criterion = nn.MSELoss(reduction='sum')
+        # self.criterion = nn.MSELoss(reduction='sum')
+        self.criterion = nn.L1Loss(reduction='sum')
         self.globaliter = 0
 
         # if torch.cuda.device_count() > 1:
@@ -101,7 +102,10 @@ class HomographyNetTrainer:
             predicted = self.model(images)
             print(f" True vs Predicted value for batch {batch_idx}")
             print(targets, predicted)
-            loss = self.criterion(predicted, targets)
+            loss0 = self.criterion(predicted[0], targets[0])
+            loss1 = self.criterion(predicted[1], targets[1])
+            loss2 = self.criterion(predicted[2], targets[2])
+            loss = loss0 + loss1 + loss2
             loss.backward()
             self.optimizer.step()
             self.scheduler.step()
@@ -134,7 +138,11 @@ class HomographyNetTrainer:
                 images = Variable(images)
                 targets = Variable(targets)
                 predicted = self.model(images)
-                loss = self.criterion(predicted, targets)
+                # loss = self.criterion(predicted, targets)
+                loss0 = self.criterion(predicted[0], targets[0])
+                loss1 = self.criterion(predicted[1], targets[1])
+                loss2 = self.criterion(predicted[2], targets[2])
+                loss = loss0 + loss1 + loss2
                 test_loss += loss.item()
             test_loss /= batch_idx
         self.txt_logger.info('\nTest set Epoch: {} Average loss: {:.4f}, \n'.format(epoch, test_loss))
@@ -234,16 +242,15 @@ if __name__ == '__main__':
         batch_size=16,
         log_interval=5,
         data_dir='dataset/biglook/',
-        save_path='homography_mutlihead_nodropout/',
+        save_path='homography_mutlihead_nosigmoid/',
         out_len=3,
         apply_dropout=False,
         drop_out=0.4,
         apply_norm=True,
         norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
-        restore_model=True,
+        restore_model=False,
         restore_at=None
     )
-
     self = HomographyNetTrainer(model_config)
     self.train()
