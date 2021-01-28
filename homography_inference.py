@@ -46,6 +46,7 @@ class HomographyInference:
         image = Variable(image)
         with torch.no_grad():
             output = self.model(image).squeeze()
+        print(output)
 
         # obtain the inverse homography matrix from the output tensor
 
@@ -72,6 +73,6 @@ if __name__ == '__main__':
     self = HomographyInference(model_path="pretrained/model_at_25_loss(0.06869517415761947).pt",
                                transform=transform)
 
-    image = Image.open('images/1_distoted.png').convert('RGB').resize((1024, 1024))
+    image = Image.open('images/1_distoted.png').convert('RGB').resize((512, 512))
 
     corrected_image = self.inference(image)
