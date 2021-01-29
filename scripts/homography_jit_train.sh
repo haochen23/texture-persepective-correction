@@ -10,6 +10,7 @@ python homography_jit_train.py \
 --norm_type BatchNorm \
 --s3_bucket deeppbrmodels/ \
 --restore_model True \
---restore_at  None
+--restore_at  None \
+--txt_logger Homography
 #--apply_dropout \
 #--dropout_ratio 0.4 \

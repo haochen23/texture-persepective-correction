@@ -40,6 +40,7 @@ class HomographyNetTrainer:
         self.restore_model = conf.restore_model
         self.restore_at = conf.restore_at
         self.s3 = s3fs.S3FileSystem(anon=False)
+        self.txt_logger_file = conf.txt_logger
 
         # create loggers
         self.txt_logger = create_logger("HomographyJIT-Train", "logs/")
@@ -100,8 +101,8 @@ class HomographyNetTrainer:
 
             self.optimizer.zero_grad()
             predicted = self.model(images)
-            print(f" True vs Predicted value for batch {batch_idx}")
-            print(targets, predicted)
+            self.txt_logger.info(f" True vs Predicted value for batch {batch_idx}")
+            self.txt_logger.info(targets, predicted)
             loss0 = self.criterion(predicted[0], targets[0])
             loss1 = self.criterion(predicted[1], targets[1])
             loss2 = self.criterion(predicted[2], targets[2])
@@ -162,9 +163,19 @@ class HomographyNetTrainer:
     def save_checkpoint(self, on_cuda, model_path, epoch_num, loss_value):
         if on_cuda:
             if isinstance(self.model, nn.DataParallel):
-                torch.save(self.model.module.cpu(), f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
+                torch.save({'model_state_dict': self.model.module.cpu().state_dict(),
+                            'optimizer_state_dict': self.optimizer.state_dict(),
+                            'lr_scheduler_state_dict': self.scheduler.state_dict(),
+                            'epoch': self.starting_at,
+                            'loss':loss_value},
+                           f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
             else:
-                torch.save(self.model.cpu(), f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
+                torch.save({'model_state_dict': self.model.cpu().state_dict(),
+                            'optimizer_state_dict': self.optimizer.state_dict(),
+                            'lr_scheduler_state_dict': self.scheduler.state_dict(),
+                            'epoch': self.starting_at,
+                            'loss': loss_value},
+                           f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
             self.model.cuda()
         # Upload to s3
         self.s3.put(f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt",
@@ -215,18 +226,25 @@ class HomographyNetTrainer:
                 self.txt_logger.error("Checkpoints not found in S3.")
                 return
 
-        checkpoint = [_ for _ in self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}") if f"model_at_{restore_at}_loss" in _]
-        if len(checkpoint) > 0:
-            checkpoint = checkpoint[0]
-            self.txt_logger.info(f"Restoring {checkpoint}")
+        checkpoint_file = [_ for _ in self.s3.ls('s3://' + self.s3_bucket + f"{self.save_path}") if f"model_at_{restore_at}_loss" in _]
+        if len(checkpoint_file) > 0:
+            checkpoint_file = checkpoint_file[0]
+            self.txt_logger.info(f"Restoring {checkpoint_file}")
             self.starting_at = restore_at + 1
             # if local directory contains the file, load from local
-            if os.path.isfile(self.save_path + checkpoint):
-                self.model = torch.load(self.save_path + checkpoint)
+            if os.path.isfile(self.save_path + checkpoint_file):
+                checkpoint = torch.load(self.save_path + checkpoint_file)
+                self.model.load_state_dict(checkpoint['model_state_dict'])
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                self.scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
+
             else:
                 # download checkpoint from s3
-                self.s3.get(checkpoint, self.save_path+checkpoint)
-                self.model = torch.load(self.save_path + checkpoint)
+                self.s3.get(checkpoint_file, self.save_path+checkpoint_file)
+                checkpoint = torch.load(self.save_path + checkpoint_file)
+                self.model.load_state_dict(checkpoint['model_state_dict'])
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                self.scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
 
         else:
             return
@@ -243,15 +261,16 @@ if __name__ == '__main__':
         batch_size=16,
         log_interval=5,
         data_dir='dataset/biglook/',
-        save_path='homography_mutlihead_nosigmoid/',
+        save_path='homography_mutlihead_sigmoid/',
         out_len=3,
         apply_dropout=False,
         drop_out=0.4,
         apply_norm=True,
         norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
-        restore_model=True,
-        restore_at=None
+        restore_model=False,
+        restore_at=None,
+        txt_logger='homography_multihead_sigmoid'
     )
     self = HomographyNetTrainer(model_config)
     self.train()
