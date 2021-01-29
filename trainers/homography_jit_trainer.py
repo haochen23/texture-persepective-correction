@@ -169,6 +169,7 @@ class HomographyNetTrainer:
         # Upload to s3
         self.s3.put(f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt",
                     's3://' + self.s3_bucket + f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
+        os.remove(f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
 
     def train(self):
 
@@ -218,7 +219,7 @@ class HomographyNetTrainer:
         if len(checkpoint) > 0:
             checkpoint = checkpoint[0]
             self.txt_logger.info(f"Restoring {checkpoint}")
-            self.starting_at = restore_at
+            self.starting_at = restore_at + 1
             # if local directory contains the file, load from local
             if os.path.isfile(self.save_path + checkpoint):
                 self.model = torch.load(self.save_path + checkpoint)
@@ -249,7 +250,7 @@ if __name__ == '__main__':
         apply_norm=True,
         norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
-        restore_model=False,
+        restore_model=True,
         restore_at=None
     )
     self = HomographyNetTrainer(model_config)

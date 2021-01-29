@@ -6,7 +6,8 @@ from config import IMG_EXTENSIONS
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib
-matplotlib.rcParams['figure.figsize'] = (20, 20)
+matplotlib.use('TkAgg')
+matplotlib.rcParams["figure.figsize"] = [15, 15]
 
 def pil_from_cv2(image):
     if len(image.shape) == 3:
@@ -164,7 +165,7 @@ def plot_grad_flow(named_parameters):
                 Line2D([0], [0], color="b", lw=4),
                 Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
     plt.show()
-    plt.savefig('weights_gradient_flow.png')
+    # plt.savefig('weights_gradient_flow.png')
 
 
 if __name__ == '__main__':
