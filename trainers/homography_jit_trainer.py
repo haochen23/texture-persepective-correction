@@ -141,9 +141,9 @@ class HomographyNetTrainer:
                 targets = Variable(targets)
                 predicted = self.model(images)
                 # loss = self.criterion(predicted, targets)
-                loss0 = self.criterion(predicted[0], targets[0])
-                loss1 = self.criterion(predicted[1], targets[1])
-                loss2 = self.criterion(predicted[2], targets[2])
+                loss0 = self.criterion(predicted[:, 0], targets[:, 0])
+                loss1 = self.criterion(predicted[:, 1], targets[:, 1])
+                loss2 = self.criterion(predicted[:, 2], targets[:, 2])
                 loss = loss0 + loss1 + loss2
                 test_loss += loss.item()
             test_loss /= batch_idx
