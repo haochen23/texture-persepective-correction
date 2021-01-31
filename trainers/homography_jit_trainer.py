@@ -43,7 +43,7 @@ class HomographyNetTrainer:
         self.txt_logger_file = conf.txt_logger
 
         # create loggers
-        self.txt_logger = create_logger("HomographyJIT-Train", "logs/")
+        self.txt_logger = create_logger(self.txt_logger_file, "logs/")
         self.tf_logger = TFLogger(r'tensorboard_logs/Homography/')
 
         if not os.path.exists(self.save_path):
@@ -102,10 +102,11 @@ class HomographyNetTrainer:
             self.optimizer.zero_grad()
             predicted = self.model(images)
             self.txt_logger.info(f" True vs Predicted value for batch {batch_idx}")
-            self.txt_logger.info(targets, predicted)
-            loss0 = self.criterion(predicted[0], targets[0])
-            loss1 = self.criterion(predicted[1], targets[1])
-            loss2 = self.criterion(predicted[2], targets[2])
+            self.txt_logger.info(targets)
+            self.txt_logger.info(predicted)
+            loss0 = self.criterion(predicted[:,0], targets[:,0])
+            loss1 = self.criterion(predicted[:,1], targets[:,1])
+            loss2 = self.criterion(predicted[:,2], targets[:,2])
             loss = loss0 + loss1 + loss2
             loss.backward()
             self.optimizer.step()
@@ -261,7 +262,7 @@ if __name__ == '__main__':
         batch_size=16,
         log_interval=5,
         data_dir='dataset/biglook/',
-        save_path='homography_mutlihead_sigmoid/',
+        save_path='homography_mutlihead_nosigmoid_bs16/',
         out_len=3,
         apply_dropout=False,
         drop_out=0.4,
@@ -270,7 +271,7 @@ if __name__ == '__main__':
         s3_bucket="deeppbrmodels/",
         restore_model=False,
         restore_at=None,
-        txt_logger='homography_multihead_sigmoid'
+        txt_logger='homography_multihead_nosigmoid_bs16'
     )
     self = HomographyNetTrainer(model_config)
     self.train()
