@@ -18,7 +18,7 @@ def get_homography(t, width=512, height=512):
     """
     array = t.detach().cpu().numpy()
     # rotation angle, rotate from center theta in range [-20, 20]
-    theta = (array[0] * 2 - 1) / 40
+    theta = (array[0] * 2 - 1) / 30
 
     # perspective parameters
     p1 = (array[1] * 2 - 1) / 6000

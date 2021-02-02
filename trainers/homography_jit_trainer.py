@@ -64,6 +64,14 @@ class HomographyNetTrainer:
         self.model = HomographyNet(apply_norm=self.apply_norm, norm_type=self.norm_type,
                                    apply_dropout=self.apply_dropout, drop_out=self.drop_out,
                                    out_len=self.out_len)
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        self.scheduler = optim.lr_scheduler.CyclicLR(self.optimizer,
+                                                     base_lr=self.lr / 50,
+                                                     max_lr=self.lr,
+                                                     step_size_up=2000,
+                                                     cycle_momentum=False)
+        self.scheduler = self.scheduler
         self.starting_at = 1
         if self.restore_model:
             self.restore_checkpoint(restore_at=self.restore_at)
@@ -80,12 +88,6 @@ class HomographyNetTrainer:
             self.model = self.model.cuda()
             self.criterion = self.criterion.cuda()
 
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.CyclicLR(self.optimizer,
-                                                     base_lr=self.lr/50,
-                                                     max_lr=self.lr,
-                                                     step_size_up=2000,
-                                                     cycle_momentum=False)
 
     def train_epoch(self, epoch):
         self.txt_logger.info(f"Training epoch {epoch}...")
@@ -107,7 +109,7 @@ class HomographyNetTrainer:
             loss0 = self.criterion(predicted[:,0], targets[:,0])
             loss1 = self.criterion(predicted[:,1], targets[:,1])
             loss2 = self.criterion(predicted[:,2], targets[:,2])
-            loss = loss0 + loss1 + loss2
+            loss = loss0  + loss1 * 10000 + loss2 *10000
             loss.backward()
             self.optimizer.step()
             self.scheduler.step()
@@ -144,7 +146,7 @@ class HomographyNetTrainer:
                 loss0 = self.criterion(predicted[:, 0], targets[:, 0])
                 loss1 = self.criterion(predicted[:, 1], targets[:, 1])
                 loss2 = self.criterion(predicted[:, 2], targets[:, 2])
-                loss = loss0 + loss1 + loss2
+                loss = loss0 + loss1 * 10000 + loss2 * 10000
                 test_loss += loss.item()
             test_loss /= batch_idx
         self.txt_logger.info('\nTest set Epoch: {} Average loss: {:.4f}, \n'.format(epoch, test_loss))
@@ -234,17 +236,25 @@ class HomographyNetTrainer:
             self.starting_at = restore_at + 1
             # if local directory contains the file, load from local
             if os.path.isfile(self.save_path + checkpoint_file):
-                checkpoint = torch.load(self.save_path + checkpoint_file)
-                self.model.load_state_dict(checkpoint['model_state_dict'])
+                checkpoint = torch.load(self.save_path + checkpoint_file, map_location=self.device)
+                self.model.load_state_dict(checkpoint['model_state_dict'], strict=True)
                 self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                for state in self.optimizer.state.values():
+                    for k, v in state.items():
+                        if isinstance(v, torch.Tensor):
+                            state[k] = v.to(self.device)
                 self.scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
 
             else:
                 # download checkpoint from s3
                 self.s3.get(checkpoint_file, self.save_path+checkpoint_file)
-                checkpoint = torch.load(self.save_path + checkpoint_file)
-                self.model.load_state_dict(checkpoint['model_state_dict'])
+                checkpoint = torch.load(self.save_path + checkpoint_file, map_location=self.device)
+                self.model.load_state_dict(checkpoint['model_state_dict'], strict=True)
                 self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                for state in self.optimizer.state.values():
+                    for k, v in state.items():
+                        if isinstance(v, torch.Tensor):
+                            state[k] = v.to(self.device)
                 self.scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
 
         else:
@@ -269,7 +279,7 @@ if __name__ == '__main__':
         apply_norm=True,
         norm_type="BatchNorm",
         s3_bucket="deeppbrmodels/",
-        restore_model=False,
+        restore_model=True,
         restore_at=None,
         txt_logger='homography_multihead_nosigmoid_bs16'
     )
