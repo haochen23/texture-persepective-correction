@@ -5,6 +5,9 @@ from numpy.linalg import inv
 import cv2
 from config import homography_config
 from PIL import Image
+import matplotlib.pyplot as plt
+import io
+from torchvision.transforms import ToTensor
 
 
 def get_homography(t, width=512, height=512):
@@ -68,6 +71,7 @@ def decode_output(t, width=512, height=512, scale=1.0):
     :return:
         H_inv: decoded homography matrix that can be used for inference
     """
+    t = torch.clamp(t, min=0., max=1.)
 
     H = get_homography(t=t, width=width, height=height)
     H_inv = inv(H)
@@ -172,11 +176,60 @@ def pad_and_crop_to_size(image, to_size=1024):
     return new_image
 
 
+def plot_images2fig(orig_image, true_image, predicted_image):
+    """
+    plot three numpy images to a matplotlib figure
+    Args:
+        orig_image:         Original Distorted Image
+        true_image:         True Corrected Image
+        predicted_image:    Prediction Corrected Image
+
+    Returns:
+        fig:     matplotlib figure object with all the plots
+    """
+    fig = plt.figure(figsize=[15, 5])
+    plt.axis('off')
+    a = fig.add_subplot(1, 3, 1)
+    a.set_title('Original Distorted')
+    a.imshow(orig_image)
+    b = fig.add_subplot(1, 3, 2)
+    b.set_title(f'True Image')
+    b.imshow(true_image)
+    p = fig.add_subplot(1, 3, 3)
+    p.set_title(f'Predicted Image')
+    p.imshow(predicted_image)
+
+    return fig
+
+
+def figure2image(figure):
+    """
+    Converts matlplotlib figure objecct to a png image object
+    Args:
+        figure: matplotlib figure object
+
+    Returns:
+        a 4-d torch tensor converted from a PIL Image object
+
+    """
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close(figure)
+    buf.seek(0)
+    img = Image.open(buf)
+    img = ToTensor()(img).unsqueeze(0)
+    return img
+
+
+
 if __name__ == '__main__':
     image = Image.open('images/1.png').convert('RGB')
     image = image.resize((1024, 1024))
     new_image = pad_and_crop_to_size(image)
     new_image.show()
+
+
+
 
 
 
