@@ -17,8 +17,9 @@ from utils.homography_utils import pad_and_crop_to_size, decode_output
 import s3fs
 import random
 import cv2
+import numpy as np
 
-from PIL import ImageFile
+from PIL import ImageFile, Image
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -128,7 +129,7 @@ class HomographyNetTrainer:
                            100. * batch_idx / len(self.train_loader), loss.item()))
                 # plot_grad_flow(self.model.named_parameters())
                 if len(targets) > 1:
-                    indices = random.choices(range(len(targets)), 2)
+                    indices = random.choices(range(len(targets)), k=2)
                 else:
                     indices = [0]
 
@@ -282,7 +283,7 @@ class HomographyNetTrainer:
     def save_output(self, im_tensors, predictions, targets):
         images = tensor2im(im_tensors)
         for i in range(len(images)):
-            padded_image = pad_and_crop_to_size(images[i].squeeze(), to_size=homography_config['load_width'])
+            padded_image = np.array(pad_and_crop_to_size(Image.fromarray(images[i].squeeze()), to_size=homography_config['load_width']))
             true_H = decode_output(targets[i].squeeze(),
                                    width=homography_config['load_width'],
                                    height=homography_config['load_height'],
@@ -310,7 +311,7 @@ if __name__ == '__main__':
         cuda=True if torch.cuda.is_available() else False,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         seed=42,
-        lr=0.005,
+        lr=0.03,
         epochs=500,
         save_epoch=True,
         batch_size=16,
