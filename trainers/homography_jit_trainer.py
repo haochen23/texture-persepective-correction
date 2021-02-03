@@ -8,11 +8,20 @@ from config import Config, homography_config
 from data import get_homography_jit_loader
 from models.model_homography import HomographyNet
 import os
-from utils.image_utils import get_train_val_paths, plot_grad_flow
+from utils.image_utils import (get_train_val_paths,
+                               plot_grad_flow,
+                               tensor2im,
+                               plot_images2fig,
+                               figure2image)
+from utils.homography_utils import pad_and_crop_to_size, decode_output
 import s3fs
+import random
+import cv2
 
 from PIL import ImageFile
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+
 
 class HomographyNetTrainer:
 
@@ -88,7 +97,6 @@ class HomographyNetTrainer:
             self.model = self.model.cuda()
             self.criterion = self.criterion.cuda()
 
-
     def train_epoch(self, epoch):
         self.txt_logger.info(f"Training epoch {epoch}...")
         self.model.train()
@@ -106,10 +114,10 @@ class HomographyNetTrainer:
             self.txt_logger.info(f" True vs Predicted value for batch {batch_idx}")
             self.txt_logger.info(targets)
             self.txt_logger.info(predicted)
-            loss0 = self.criterion(predicted[:,0], targets[:,0])
-            loss1 = self.criterion(predicted[:,1], targets[:,1])
-            loss2 = self.criterion(predicted[:,2], targets[:,2])
-            loss = loss0  + loss1 * 10000 + loss2 *10000
+            loss0 = self.criterion(predicted[:, 0], targets[:, 0])
+            loss1 = self.criterion(predicted[:, 1], targets[:, 1])
+            loss2 = self.criterion(predicted[:, 2], targets[:, 2])
+            loss = loss0 + loss1 * 10000 + loss2 * 10000
             loss.backward()
             self.optimizer.step()
             self.scheduler.step()
@@ -117,16 +125,23 @@ class HomographyNetTrainer:
             if batch_idx % self.log_interval == 0:
                 self.txt_logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(images), len(self.train_loader.dataset),
-                    100. * batch_idx / len(self.train_loader), loss.item()))
-                plot_grad_flow(self.model.named_parameters())
+                           100. * batch_idx / len(self.train_loader), loss.item()))
+                # plot_grad_flow(self.model.named_parameters())
+                if len(targets) > 1:
+                    indices = random.choices(range(len(targets)), 2)
+                else:
+                    indices = [0]
+
+                self.save_output(im_tensors=images[indices],
+                                 predictions=predicted[indices],
+                                 targets=targets[indices])
+
 
             # ============ TensorBoard logging ============#
             self.globaliter += 1
             info = {'train_loss': loss.item()}
             for tag, value in info.items():
                 self.tf_logger.scalar_summary(tag, value, step=self.globaliter)
-
-
 
     def test_epoch(self, epoch):
         self.txt_logger.info(f"Validating epoch {epoch}... ")
@@ -170,14 +185,16 @@ class HomographyNetTrainer:
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'lr_scheduler_state_dict': self.scheduler.state_dict(),
                             'epoch': self.starting_at,
-                            'loss':loss_value},
+                            'loss': loss_value,
+                            'globaliter': self.globaliter},
                            f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
             else:
                 torch.save({'model_state_dict': self.model.cpu().state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
                             'lr_scheduler_state_dict': self.scheduler.state_dict(),
                             'epoch': self.starting_at,
-                            'loss': loss_value},
+                            'loss': loss_value,
+                            'globaliter': self.globaliter},
                            f"{model_path}model_at_{epoch_num}_loss({loss_value}).pt")
             self.model.cuda()
         # Upload to s3
@@ -194,7 +211,7 @@ class HomographyNetTrainer:
         for epoch in range(self.starting_at, self.starting_at + self.epochs + 1):
             self.train_epoch(epoch)
             if epoch == self.starting_at:
-                self.tf_logger.writer.add_graph(self.model,input_to_model=torch.rand([8, 3, 512, 512], device="cuda"))
+                self.tf_logger.writer.add_graph(self.model, input_to_model=torch.rand([8, 3, 512, 512], device="cuda"))
             valid_loss = self.test_epoch(epoch)
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
@@ -244,10 +261,11 @@ class HomographyNetTrainer:
                         if isinstance(v, torch.Tensor):
                             state[k] = v.to(self.device)
                 self.scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
+                self.globaliter = checkpoint['globaliter']
 
             else:
                 # download checkpoint from s3
-                self.s3.get(checkpoint_file, self.save_path+checkpoint_file)
+                self.s3.get(checkpoint_file, self.save_path + checkpoint_file)
                 checkpoint = torch.load(self.save_path + checkpoint_file, map_location=self.device)
                 self.model.load_state_dict(checkpoint['model_state_dict'], strict=True)
                 self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -256,9 +274,35 @@ class HomographyNetTrainer:
                         if isinstance(v, torch.Tensor):
                             state[k] = v.to(self.device)
                 self.scheduler.load_state_dict(checkpoint['lr_scheduler_state_dict'])
+                self.globaliter = checkpoint['globaliter']
 
         else:
             return
+
+    def save_output(self, im_tensors, predictions, targets):
+        images = tensor2im(im_tensors)
+        for i in range(len(images)):
+            padded_image = pad_and_crop_to_size(images[i].squeeze(), to_size=homography_config['load_width'])
+            true_H = decode_output(targets[i].squeeze(),
+                                   width=homography_config['load_width'],
+                                   height=homography_config['load_height'],
+                                   scale=1.0)
+            predicted_H = decode_output(predictions[i].squeeze(),
+                                        width=homography_config['load_width'],
+                                        height=homography_config['load_height'],
+                                        scale=1.0)
+
+            true_image = cv2.warpPerspective(padded_image, true_H,
+                                             (homography_config['load_width'], homography_config['load_height']))
+            predicted_image = cv2.warpPerspective(padded_image, predicted_H,
+                                                  (homography_config['load_width'], homography_config['load_height']))
+
+            fig = plot_images2fig(orig_image=padded_image,
+                                  true_image=true_image,
+                                  predicted_image=predicted_image)
+            self.tf_logger.writer.add_figure(f"Global Step {self.globaliter} - Exxample {i}",
+                                             figure=fig,
+                                             global_step=self.globaliter)
 
 
 if __name__ == '__main__':

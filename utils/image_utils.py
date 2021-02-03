@@ -6,6 +6,8 @@ from config import IMG_EXTENSIONS
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib
+import io
+from torchvision.transforms import ToTensor
 matplotlib.use('TkAgg')
 matplotlib.rcParams["figure.figsize"] = [15, 15]
 
@@ -135,6 +137,51 @@ def tensor2im(image_tensor, imtype=np.uint8, normalize=True, tile=False):
     if image_numpy.shape[2] == 1:
         image_numpy = image_numpy[:, :, 0]
     return image_numpy.astype(imtype)
+
+
+def plot_images2fig(orig_image, true_image, predicted_image):
+    """
+    plot three numpy images to a matplotlib figure
+    Args:
+        orig_image:         Original Distorted Image
+        true_image:         True Corrected Image
+        predicted_image:    Prediction Corrected Image
+
+    Returns:
+        fig:     matplotlib figure object with all the plots
+    """
+    fig = plt.figure(figsize=[15, 5])
+    plt.axis('off')
+    a = fig.add_subplot(1, 3, 1)
+    a.set_title('Original Distorted')
+    a.imshow(orig_image)
+    b = fig.add_subplot(1, 3, 2)
+    b.set_title(f'True Image')
+    b.imshow(true_image)
+    p = fig.add_subplot(1, 3, 3)
+    p.set_title(f'Predicted Image')
+    p.imshow(predicted_image)
+
+    return fig
+
+
+def figure2image(figure):
+    """
+    Converts matlplotlib figure objecct to a png image object
+    Args:
+        figure: matplotlib figure object
+
+    Returns:
+        a 4-d torch tensor converted from a PIL Image object
+
+    """
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close(figure)
+    buf.seek(0)
+    img = Image.open(buf)
+    img = ToTensor()(img).unsqueeze(0)
+    return img
 
 
 def plot_grad_flow(named_parameters):
