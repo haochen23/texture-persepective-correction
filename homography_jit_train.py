@@ -24,6 +24,8 @@ parser.add_argument("--s3_bucket", type=str, required=True,
                     help="s3 bucket to store the saved models")
 parser.add_argument("--restore_model", type=bool, default=True, help="whether to restore previous checkpoints")
 parser.add_argument("--restore_at", type=none_or_int, default=None, help="The checkpoint or epoch number to restore")
+parser.add_argument('--txt_logger', type=str, default="Homography",
+                    help='text logger file name')
 args = parser.parse_args()
 
 
@@ -46,7 +48,8 @@ if __name__ == '__main__':
         norm_type=args.norm_type,
         s3_bucket=args.s3_bucket,
         restore_model=args.restore_model,
-        restore_at=args.restore_at
+        restore_at=args.restore_at,
+        txt_logger=args.txt_logger
     )
 
     trainer = HomographyNetTrainer(model_config)

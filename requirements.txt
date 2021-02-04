@@ -7,3 +7,5 @@ opencv-python
 pytest
 scipy
 matplotlib
+s3fs
+boto3

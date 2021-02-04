@@ -128,7 +128,7 @@ class HomographyNet(nn.Module):
             nn.BatchNorm1d(16),
             nn.ReLU(),
             nn.Linear(16, 1),
-            nn.Sigmoid()
+            # nn.Sigmoid()
         )
 
     def forward(self, x):

@@ -18,7 +18,7 @@ def get_homography(t, width=512, height=512):
     """
     array = t.detach().cpu().numpy()
     # rotation angle, rotate from center theta in range [-20, 20]
-    theta = (array[0] * 2 - 1) / 40
+    theta = (array[0] * 2 - 1) / 30
 
     # perspective parameters
     p1 = (array[1] * 2 - 1) / 6000
@@ -68,6 +68,7 @@ def decode_output(t, width=512, height=512, scale=1.0):
     :return:
         H_inv: decoded homography matrix that can be used for inference
     """
+    t = torch.clamp(t, min=0., max=1.)
 
     H = get_homography(t=t, width=width, height=height)
     H_inv = inv(H)
@@ -177,6 +178,9 @@ if __name__ == '__main__':
     image = image.resize((1024, 1024))
     new_image = pad_and_crop_to_size(image)
     new_image.show()
+
+
+
 
 
 
