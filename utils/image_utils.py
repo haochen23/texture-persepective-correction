@@ -8,7 +8,7 @@ from matplotlib.lines import Line2D
 import matplotlib
 import io
 from torchvision.transforms import ToTensor
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 matplotlib.rcParams["figure.figsize"] = [15, 15]
 
 def pil_from_cv2(image):
